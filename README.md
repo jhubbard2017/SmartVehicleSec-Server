@@ -18,9 +18,9 @@ Python server software for the Smart Vehicle Security System.
 # Config
 
 ## Config File
-securityserver uses a yaml config file. to create a config:
+`securityserverpy` uses a yaml config file. to create a config:
 ```shell
-cp config.yaml.example config.yaml
+cp serverconfig.yaml.example serverconfig.yaml
 ```
 then fill out the missing values in the config file.
 
