@@ -1,0 +1,20 @@
+# This is an example config file for securityserverpy
+# to create a real config file: `cp config.yaml.example config.yaml`
+# then add proper values in the config file
+# see the README.md for more details.
+
+# system is currently armed
+system_armed = False
+
+# system is current disarmed
+system_disarmed = True
+
+# vehicle has been broken in
+system_breached = False
+
+# motion has been detected
+motion_detected = False
+
+# Cameras are live
+cameras_live = False
+
