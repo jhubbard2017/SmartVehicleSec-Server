@@ -19,7 +19,9 @@ class SecurityData(object):
         self.VIEW_CAMERA_FEED1 = 'VIEWCAMERAFEED1'
         self.VIEW_CAMERA_FEED2 = 'VIEWCAMERAFEED2'
         self.VIEW_CAMERA_FEED3 = 'VIEWCAMERAFEED3'
+        self.RESPOND_OKAY = 'RESPONDOKAY'
         self.RESPOND_DISPATCHER = 'RESPONDDISPATCHER'
+        self.DISCONNECTCLIENT = 'DISCONNECTCLIENT'
 
 
 class SecurityServer(object):
@@ -80,4 +82,9 @@ class SecurityServer(object):
             elif data == sec_data.RESPOND_DISPATCHER:
                 # send message to dispatchers about break in
                 pass
+            elif data == sec_data.RESPOND_OKAY:
+                # system breach false alarm
+                pass
+            elif data == sec_data.DISCONNECTCLIENT:
+                break
 
