@@ -2,7 +2,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-from securityserver.version import __version__
+from securityserverpy.version import __version__
 
 setup(
     name='Vechicle Security System Server',
@@ -19,7 +19,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'securityserver=securityserver.main:main',
+            'securityserverpy=securityserverpy.main:main',
         ]
     }
 )
