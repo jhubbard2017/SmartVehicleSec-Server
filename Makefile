@@ -16,7 +16,7 @@ prod:
     tox -evenv
 
 clean:
-    rm -rf build/ dist/ securityserver.egg-info/ .tox/ venv*/
+    rm -rf build/ dist/ securityserverpy.egg-info/ .tox/ venv*/
     find . -name '*.pyc' -delete
     find . -name '__pycache__' -delete
     find . -name '*.log' -delete

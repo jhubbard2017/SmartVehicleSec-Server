@@ -6,8 +6,8 @@
 import os
 import xmltodict
 
-from securityserver import _logger
-from securityserver.version import __version__
+from securityserverpy import _logger
+from securityserverpy.version import __version__
 # more imports to come as project progresses
 
 
