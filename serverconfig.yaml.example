@@ -9,12 +9,6 @@ system_armed = False
 # system is current disarmed
 system_disarmed = True
 
-# vehicle has been broken in
-system_breached = False
-
-# motion has been detected
-motion_detected = False
-
 # Cameras are live
 cameras_live = False
 

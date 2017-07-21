@@ -39,13 +39,12 @@ class Config(object):
 
     def _load_config(self):
         """loads security configuration data from local config file"""
-        success = True
         try:
             with open(self.local_file_name, 'r') as fp:
                 file_contents = yaml.load(fp.read())
         except (IOError, yaml.YAMLError) as exception:
             _logger.debug('Could not read file [{0}]'.format(exception))
-            return not success
+            return
 
         for key, value in file_contents.iteritems():
             if key not in self.values:
@@ -54,15 +53,18 @@ class Config(object):
             else:
                 _logger.debug('Ignoring key [{0}] from security config'.format(key))
 
-        return success
-
     def store_config(self):
+        """stores the current config state in `securityconfig.yaml` file
+
+        returns:
+            bool
+        """
         success = True
         try:
             with open(self.local_file_name, 'w') as fp:
                 yaml.dump(self.values, fp)
         except (IOError, yaml.YAMLError) as exception:
-            _logger.debug('Culd not write to file [{0}]'.format(exception))
+            _logger.debug('Could not write to file [{0}]'.format(exception))
             return not success
 
         return success
@@ -82,22 +84,6 @@ class Config(object):
     @system_disarmed.setter
     def system_disarmed(self, value):
         self.values['system_disarmed'] = value
-
-    @property
-    def system_breached(self):
-        return self.values.get('system_breached')
-
-    @system_breached.setter
-    def system_breached(self, value):
-        self.values['system_breached'] = value
-
-    @property
-    def motion_detected(self):
-        return self.values.get('motion_detected')
-
-    @motion_detected.setter
-    def motion_detected(self, value):
-        self.values['motion_detected'] = value
 
     @property
     def cameras_live(self):
