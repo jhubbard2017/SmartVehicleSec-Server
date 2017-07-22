@@ -13,14 +13,24 @@ class Device(object):
     """represents a single connected device"""
 
     def __init__(self, address, name=None):
-        self.address = address
-        self.name = name
+        self._address = address
+        self._name = name
 
-    def get_address(self):
-        return self.address
+    @property
+    def address(self):
+        return self._address
 
-    def get_name(self):
-        return self.name
+    @address.setter
+    def address(self, value):
+        self._address = value
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
 
 
 class DeviceManager(object):
@@ -87,13 +97,14 @@ class DeviceManager(object):
         """
         return addr in self.addrs_to_store
 
-    def add_device(self, addr):
+    def add_device(self, addr, name):
         """store new device in device manager
 
         args:
             addr: str
         """
         new_device = Device(addr)
+        new_device.name = name
         self.devices[addr] = new_device
         self.addrs_to_store.append(addr)
 
