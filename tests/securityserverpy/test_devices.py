@@ -32,6 +32,10 @@ class TestDeviceManager(unittest.TestCase):
         self.manager = DeviceManager(file_name='devices.yaml.example')
         self.manager.clear()
 
+    def tearDown(self):
+        self.manager.clear()
+        self.manager.store_devices()
+
     def test_devices_file_error(self):
         manager = DeviceManager(file_name='file doesnt exist')
         self.assertFalse(manager.devices_loaded)
