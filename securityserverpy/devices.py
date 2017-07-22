@@ -24,25 +24,24 @@ class Device(object):
     def name(self):
         return self.name
 
-    @name.setter
-    def name(self, value):
-        self.name = value
-
 
 class DeviceManager(object):
     """manages clients connected to socket"""
 
     _DEFAULT_DEVICES_FILE = 'devices.yaml'
 
-    def __init__(self):
+    def __init__(self, config_file_name=None):
         self.devices = {}
         self.addrs_to_store = []
+
+        self.local_file_name = config_file_name or DeviceManager._DEFAULT_DEVICES_FILE
+
         self._load_config()
 
-    def _load_config(self):
+    def _load_devices(self):
         """loads security configuration data from local config file"""
         try:
-            with open(DeviceManager._DEFAULT_DEVICES_FILE, 'r') as fp:
+            with open(self.local_file_name, 'r') as fp:
                 file_contents = yaml.load(fp.read())
         except (IOError, yaml.YAMLError) as exception:
             _logger.debug('Could not read file [{0}]'.format(exception))
@@ -55,6 +54,24 @@ class DeviceManager(object):
                     new_device = Device(addr)
                     self.devices[addr] = new_device
                     self.addrs_to_store.append(addr)
+
+    def store_devices(self):
+        """stores the current devices in yaml file
+
+        returns:
+            bool
+        """
+        success = True
+        to_store = {'devices': self.addrs_to_store}
+
+        try:
+            with open(self.local_file_name, 'w') as fp:
+                yaml.dump(to_store, fp)
+        except (IOError, yaml.YAMLError) as exception:
+            _logger.debug('Could not write to file [{0}]'.format(exception))
+            return not success
+
+        return success
 
     def device_exist(self, addr):
         """check if device already exists
@@ -101,3 +118,11 @@ class DeviceManager(object):
         """
         del self.devices[addr]
         self.addrs_to_store.remove(addr)
+
+    def device_count(self):
+        """gets the number of devices in Device manager
+
+        returns:
+            int
+        """
+        return len(self.devices)

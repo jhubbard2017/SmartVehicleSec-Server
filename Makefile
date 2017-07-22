@@ -1,25 +1,25 @@
 .DELETE_ON_ERROR:
 
 all:
-    echo >&2 "Must specify target."
+	echo >&2 "Must specify target."
 
 test:
-    tox
+	tox
 
 testpdb:
-    tox -epdb
+	tox -epdb
 
 develop:
-    tox -edevelop
+	tox -edevelop
 
 prod:
-    tox -evenv
+	tox -evenv
 
 clean:
-    rm -rf build/ dist/ securityserverpy.egg-info/ .tox/ venv*/
-    find . -name '*.pyc' -delete
-    find . -name '__pycache__' -delete
-    find . -name '*.log' -delete
+	rm -rf build/ dist/ securityserverpy.egg-info/ .tox/ venv*/
+	find . -name '*.pyc' -delete
+	find . -name '__pycache__' -delete
+	find . -name '*.log' -delete
 
 .PHONY:
-    all test testpdb develop prod clean
+	all test testpdb develop prod clean
