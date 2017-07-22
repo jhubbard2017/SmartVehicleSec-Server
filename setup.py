@@ -5,7 +5,7 @@ from setuptools import setup
 from securityserverpy.version import __version__
 
 setup(
-    name='Vechicle Security System Server',
+    name='securityserverpy',
     version=__version__,
     author='Jordan Hubbard',
     author_email='jhubb95@yahoo.com',
@@ -13,7 +13,6 @@ setup(
     packages=find_packages(),
     setup_requires='setuptools',
     install_requires=[
-        'RPi',
         'xmltodict',
         'PyYAML'
     ],

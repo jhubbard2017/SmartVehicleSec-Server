@@ -10,6 +10,7 @@ import time
 
 from securityserverpy import _logger
 
+
 class HardwareController(object):
     """controller class for hardware components"""
 
