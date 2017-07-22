@@ -70,7 +70,6 @@ class Config(object):
     def reset_config(self):
         """resets attributes back to original settings"""
         self.values['system_armed'] = False
-        self.values['system_disarmed'] = True
         self.values['cameras_live'] = False
 
     @property
@@ -80,14 +79,6 @@ class Config(object):
     @system_armed.setter
     def system_armed(self, value):
         self.values['system_armed'] = value
-
-    @property
-    def system_disarmed(self):
-        return self.values.get('system_disarmed')
-
-    @system_disarmed.setter
-    def system_disarmed(self, value):
-        self.values['system_disarmed'] = value
 
     @property
     def cameras_live(self):
