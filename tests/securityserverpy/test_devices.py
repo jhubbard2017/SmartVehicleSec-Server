@@ -29,7 +29,12 @@ class TestDeviceManager(unittest.TestCase):
     def setUp(self):
         self.addr1 = '123.4.5.678'
         self.addr2 = '987.6.5.432'
-        self.manager = DeviceManager()
+        self.manager = DeviceManager(file_name='devices.yaml.example')
+        self.manager.clear()
+
+    def test_devices_file_error(self):
+        manager = DeviceManager(file_name='file doesnt exist')
+        self.assertFalse(manager.devices_loaded)
 
     def test_add_devices(self):
         """test add devices to device manager"""
@@ -58,8 +63,10 @@ class TestDeviceManager(unittest.TestCase):
         device1 = self.manager.find_device(self.addr1)
         device2 = self.manager.find_device(self.addr2)
 
-        self.assertEqual(device1.address, self.addr1)
-        self.assertEqual(device2.address, self.addr2)
+        self.assertEqual(device1.get_address(), self.addr1)
+        self.assertEqual(device2.get_address(), self.addr2)
+        self.assertEqual(device1.get_name(), None)
+        self.assertEqual(device2.get_name(), None)
 
     def test_get_device_fails(self):
         """test get device fails"""
@@ -68,3 +75,15 @@ class TestDeviceManager(unittest.TestCase):
 
         self.assertTrue(device1 is None)
         self.assertTrue(device2 is None)
+
+    def test_store_devices(self):
+        """test store devices in yaml file"""
+        manager = DeviceManager(file_name='tests/data/testdevices.yaml')
+        manager.add_device(self.addr1)
+        manager.add_device(self.addr2)
+        manager.store_devices()
+
+        new_manager = DeviceManager(file_name='tests/data/testdevices.yaml')
+
+        self.assertEqual(manager.find_device(self.addr1).get_address(), new_manager.find_device(self.addr1).get_address())
+        self.assertEqual(manager.find_device(self.addr2).get_address(), new_manager.find_device(self.addr2).get_address())

@@ -2,4 +2,4 @@
 # then add proper values in the config file
 # see the README.md for more details.
 
-devices = []
+devices: ['addr1', 'addr2']

@@ -16,12 +16,10 @@ class Device(object):
         self.address = address
         self.name = name
 
-    @property
-    def address(self):
+    def get_address(self):
         return self.address
 
-    @property
-    def name(self):
+    def get_name(self):
         return self.name
 
 
@@ -30,13 +28,12 @@ class DeviceManager(object):
 
     _DEFAULT_DEVICES_FILE = 'devices.yaml'
 
-    def __init__(self, config_file_name=None):
+    def __init__(self, file_name=None):
         self.devices = {}
         self.addrs_to_store = []
-
-        self.local_file_name = config_file_name or DeviceManager._DEFAULT_DEVICES_FILE
-
-        self._load_config()
+        self.local_file_name = file_name or DeviceManager._DEFAULT_DEVICES_FILE
+        self.devices_loaded = True
+        self._load_devices()
 
     def _load_devices(self):
         """loads security configuration data from local config file"""
@@ -45,6 +42,7 @@ class DeviceManager(object):
                 file_contents = yaml.load(fp.read())
         except (IOError, yaml.YAMLError) as exception:
             _logger.debug('Could not read file [{0}]'.format(exception))
+            self.devices_loaded = False
             return
 
         # First loop should only iterate once since `devices` is the only key in the file
@@ -54,6 +52,11 @@ class DeviceManager(object):
                     new_device = Device(addr)
                     self.devices[addr] = new_device
                     self.addrs_to_store.append(addr)
+
+    def clear(self):
+        """removes all members of device manager"""
+        self.devices = {}
+        self.addrs_to_store = []
 
     def store_devices(self):
         """stores the current devices in yaml file

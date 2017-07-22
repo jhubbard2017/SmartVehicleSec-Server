@@ -3,7 +3,8 @@
 *.egg-info/
 .DS_Store
 .idea/
-config.yaml
+serverconfig.yaml
+devices.yaml
 .coverage
 venv-*/
 build/
