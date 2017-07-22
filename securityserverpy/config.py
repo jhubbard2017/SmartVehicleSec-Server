@@ -50,8 +50,6 @@ class Config(object):
             if key not in self.values:
                 self.values[key] = value
                 _logger.debug('Adding key[{0}] from security config'.format(key))
-            else:
-                _logger.debug('Ignoring key [{0}] from security config'.format(key))
 
     def store_config(self):
         """stores the current config state in `securityconfig.yaml` file
@@ -68,6 +66,12 @@ class Config(object):
             return not success
 
         return success
+
+    def reset_config(self):
+        """resets attributes back to original settings"""
+        self.values['system_armed'] = False
+        self.values['system_disarmed'] = True
+        self.values['cameras_live'] = False
 
     @property
     def system_armed(self):
