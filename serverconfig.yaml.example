@@ -1,4 +1,3 @@
-# This is an example config file for securityserverpy
 # to create a real config file: `cp config.yaml.example config.yaml`
 # then add proper values in the config file
 # see the README.md for more details.
@@ -11,4 +10,3 @@ system_disarmed = True
 
 # Cameras are live
 cameras_live = False
-

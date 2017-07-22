@@ -25,8 +25,19 @@ cp serverconfig.yaml.example serverconfig.yaml
 then fill out the missing values in the config file.
 
 ## Config Values
-- `dry_run` will not send data to connected client
-- more config values wil be added as the project progresses
+- `system_armed` security system is armed
+- `system_disarmed` security system is disarmed
+- `cameras_live` cameras are currently live and/or recording
+
+## Devices File
+`securityserverpy` uses a yaml devices file. to create a device file:
+```shell
+cp devices.yaml.example devices.yaml
+```
+
+## Devices Values
+For flexibility purposes, users may be able to connect more than one device/client to our security server.
+- `devices` list of connected and allowed devices
 
 # Python Details
 ## first time python setup
