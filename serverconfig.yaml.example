@@ -3,10 +3,10 @@
 # see the README.md for more details.
 
 # system is currently armed
-system_armed = False
+system_armed: False
 
 # system is current disarmed
-system_disarmed = True
+system_disarmed: True
 
 # Cameras are live
-cameras_live = False
+cameras_live: False
