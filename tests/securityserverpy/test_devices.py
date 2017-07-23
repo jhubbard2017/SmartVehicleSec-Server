@@ -31,7 +31,7 @@ class TestDeviceManager(unittest.TestCase):
         self.name1 = 'device 1'
         self.addr2 = '987.6.5.432'
         self.name2 = 'device2'
-        self.manager = DeviceManager(file_name='devices.yaml.example')
+        self.manager = DeviceManager(file_name='tests/data/testdevices.yaml')
         self.manager.clear()
 
     def tearDown(self):
