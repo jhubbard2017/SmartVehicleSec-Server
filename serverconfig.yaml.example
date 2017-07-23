@@ -7,3 +7,6 @@ system_armed: False
 
 # Cameras are live
 cameras_live: False
+
+# system has been breached
+system_breached: False
