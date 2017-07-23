@@ -104,7 +104,7 @@ class DeviceManager(object):
         args:
             addr: str
         """
-        if len(self.devices) >= DeviceManager._DEVICE_LIMIT:
+        if len(self.devices) <= DeviceManager._DEVICE_LIMIT:
             new_device = Device(addr)
             new_device.name = name
             self.devices[addr] = new_device
