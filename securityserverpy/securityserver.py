@@ -3,44 +3,49 @@
 # logic for establing server communication, processing data, and sending data to clients
 #
 
-import _thread
+from threading import Thread
 import time
 import hashlib
+import imutils
 
 from securityserverpy import _logger
 from securityserverpy.sock import Sock
 from securityserverpy.devices import DeviceManager
 from securityserverpy.hwcontroller import HardwareController
 from securityserverpy.config import Config
-
-class SecurityData(object):
-    """list of string constants for data that is expected to be sent to and recieved from clients"""
-
-    def __init__(self):
-        self.ARM_SYSTEM = 'ARMSYSTEM'
-        self.DISARM_SYSTEM = 'DISARMSYSTEM'
-        self.VIEW_CAMERA_FEED1 = 'VIEWCAMERAFEED1'
-        self.VIEW_CAMERA_FEED2 = 'VIEWCAMERAFEED2'
-        self.VIEW_CAMERA_FEED3 = 'VIEWCAMERAFEED3'
-        self.RESPOND_OKAY = 'RESPONDOKAY'
-        self.RESPOND_DISPATCHER = 'RESPONDDISPATCHER'
-        self.NEWDEVICE = 'NEWDEVICE'
-        self.SUCCESS = 'SUCCESS'
-        self.FAIL = 'FAIL'
+from securityserverpy.videostreamer import VideoStreamer
 
 
 class SecurityServer(object):
     """handles server-client communication and processing of data sent and recieved"""
 
+    # Constants
     _CONFIG_FILE = 'serverconfig.yaml.example'
+    _DEFAULT_CAMERA1_ID = 0
+    _DEFAULT_CAMERA2_ID = 1
+
+    # Data expected to be recieved from clients
+    _ARM_SYSTEM = 'ARMSYSTEM'
+    _DISARM_SYSTEM = 'DISARMSYSTEM'
+    _VIEW_CAMERA_FEED1 = 'VIEWCAMERAFEED1'
+    _VIEW_CAMERA_FEED2 = 'VIEWCAMERAFEED2'
+    _FALSE_ALARM = 'FALSEALARM'
+    _CONTACT_DISPATCHER = 'CONTACTDISPATCHER'
+    _NEWDEVICE = 'NEWDEVICE'
+    _STOP_VIDEO_STREAM = 'STOPVIDEOSTREAM'
+
+    # Data to be sent to clients
+    _SUCCESS = 'SUCCESS'
+    _FAILURE = 'FAILURE'
 
     def __init__(self, port):
         self.port = port
         self.sock = Sock(self.port)
         self.hwcontroller = HardwareController()
         self.device_manager = DeviceManager()
-
         self.security_config = Config(SecurityServer._CONFIG_FILE)
+        self.videostream1 = VideoStreamer(camera=SecurityServer._DEFAULT_CAMERA1_ID)
+        self.videostream2 = VideoStreamer(camera=SecurityServer._DEFAULT_CAMERA2_ID)
 
     def start(self):
         """start the server to allow connections from incoming clients"""
@@ -62,9 +67,11 @@ class SecurityServer(object):
         while self.sock.socket_listening:
             connection, addr = self.sock.accept()
             if self.device_manager.device_exist(addr):
-                _thread.start_new_thread(self._serverthread, (addr,))
+                args = (addr)
             else:
-                _thread.start_new_thread(self._security_thread, (addr, True))
+                args = (addr, True)
+            server_thread = Thread(target=self._security_thread, args=args)
+            server_thread.start()
 
     def _add_device(self, addr, name):
         """adds a new device to list of allowed devices
@@ -89,8 +96,11 @@ class SecurityServer(object):
             bool
         """
         self.security_config.system_armed = True
-        # Todo: Start camera livestreams
+        # Todo: status led on
         # Todo: Maybe lock doors if not already locked
+        system_armed_thread = Thread(target=self._system_armed_thread, args=())
+        system_armed_thread.start()
+
         return self.security_config.system_armed
 
     def _disarm_system(self):
@@ -100,9 +110,33 @@ class SecurityServer(object):
             bool
         """
         self.security_config.system_armed = False
-        # Todo: Stop camera streams
+        if self.security_config.cameras_live:
+            self.security_config.cameras_live = False
+        # Todo: status led off
         # Todo: Maybe unlock doors if not already unlocked
+
         return not self.security_config.system_armed
+
+    def _system_armed_thread(self):
+        while self.security_config.system_armed:
+            status1, _, motion_detected1 = self.videostream1.get_frame()
+            status2, _, motion_detected2 = self.videostream2.get_frame()
+            if status1 or status2:
+                if motion_detected1 or motion_detected2:
+                    # Send notification to client (System breach)
+                    # Todo: status led flash
+                    pass
+            time.sleep(0.2)
+
+    def _videostream_thread(self, stream):
+        """thread for streaming video data to socket"""
+        while self.security_config.cameras_live:
+            status, data, _ = stream.get_frame()
+            if status:
+                self.sock.send_data(data)
+            else:
+                self.sock.send_data(SecurityServer._FAILURE)
+            time.sleep(0.2)
 
     def _security_thread(self, addr, first_conn=False):
         """thread that constantly runs until `self.sock is stopped`
@@ -112,52 +146,69 @@ class SecurityServer(object):
         args:
             connection: socket.connection object
         """
-        sec_data = SecurityData()
+        self.videostream1.start_stream()
+        self.videostream2.start_stream()
+
         while True:
             if first_conn:
                 first_conn = False
-                self.sock.send_data(sec_data.NEWDEVICE)
+                self.sock.send_data(SecurityServer._NEWDEVICE)
                 continue
 
             data = self.sock.recieve_data()
 
-            if sec_data.NEWDEVICE in data:
+            if SecurityServer._NEWDEVICE in data:
                 # Set device name
                 device_name = data.split(':')[1]
                 self._add_device(addr, device_name)
-                self.sock.send_data(sec_data.SUCCESS)
+                self.sock.send_data(SecurityServer._SUCCESS)
 
-            elif data == sec_data.DATA_ARM_SYSTEM:
+            elif data == SecurityServer._DATA_ARM_SYSTEM:
                 # arm system here
                 armed = self._arm_system()
                 if armed:
-                    self.sock.send_data(sec_data.SUCCESS)
+                    self.sock.send_data(SecurityServer._SUCCESS)
                 else:
-                    self.sock.send_data(sec_data.FAIL)
+                    self.sock.send_data(SecurityServer._FAILURE)
 
-            elif data == sec_data.DATA_DISARM_SYSTEM:
+            elif data == SecurityServer._DATA_DISARM_SYSTEM:
                 # disarm system here
                 disarmed = self._disarm_system()
                 if disarmed:
-                    self.sock.send_data(sec_data.SUCCESS)
+                    self.sock.send_data(SecurityServer._SUCCESS)
                 else:
-                    self.sock.send_data(sec_data.FAIL)
+                    self.sock.send_data(SecurityServer._FAILURE)
 
-            elif data == sec_data.VIEW_CAMERA_FEED1:
+            elif data == SecurityServer._VIEW_CAMERA_FEED1:
                 # live stream camera feed 1, if system is armed
-                pass
-            elif data == sec_data.VIEW_CAMERA_FEED2:
+                if not self.security_config.cameras_live:
+                    self.security_config.cameras_live = True
+                    stream_camera1_thread = Thread(target=self._videostream_thread, args=(self.videostream1))
+                    stream_camera1_thread.start()
+
+            elif data == SecurityServer._VIEW_CAMERA_FEED2:
                 # live stream camera feed 2, if system is armed
-                pass
-            elif data == sec_data.VIEW_CAMERA_FEED3:
-                # live stream camera feed 1, if system is armed
-                pass
-            elif data == sec_data.RESPOND_DISPATCHER:
+                if not self.security_config.cameras_live:
+                    self.security_config.cameras_live = True
+                    stream_camera2_thread = Thread(target=self._videostream_thread, args=(self.videostream2))
+                    stream_camera3_thread.start()
+
+            elif data == SecurityServer._STOP_VIDEO_STREAM:
+                if self.security_config.cameras_live:
+                    self.security_config.cameras_live = False
+                    self.sock.send_data(SecurityServer._SUCCESS)
+
+            elif data == SecurityServer._CONTACT_DISPATCHER:
                 # send message to dispatchers about break in
                 pass
-            elif data == sec_data.RESPOND_OKAY:
+            elif data == SecurityServer._FALSE_ALARM:
                 # system breach false alarm
                 pass
-            elif data == sec_data.DISCONNECTCLIENT:
-                break
 
+        self.sock.close()
+        self.security_config.store_config()
+        self.device_manager.store_devices()
+        if self.videostream1.stream_running:
+            self.videostream1.stop_stream()
+        if self.videostream2.stream_running:
+            self.videostream2.stop_stream()

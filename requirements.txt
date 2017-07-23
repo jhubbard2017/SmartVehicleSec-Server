@@ -1,3 +1,5 @@
 --extra-index-url https://pypi.python.org/pypi
 xmltodict
 PyYAML
+opencv-python
+imutils
