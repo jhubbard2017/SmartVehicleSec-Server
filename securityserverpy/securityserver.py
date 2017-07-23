@@ -7,6 +7,7 @@ from threading import Thread
 import time
 import hashlib
 import imutils
+import datetime
 
 from securityserverpy import _logger
 from securityserverpy.sock import Sock
@@ -36,6 +37,7 @@ class SecurityServer(object):
     # Data to be sent to clients
     _SUCCESS = 'SUCCESS'
     _FAILURE = 'FAILURE'
+    _SYSTEM_BREACHED = 'SYSTEMBREACHED'
 
     # status LED flash signals
     _FLASH_NEW_DEVICE = 3
@@ -70,6 +72,8 @@ class SecurityServer(object):
             - If so, start thread
             - If not, do not start thread
         """
+        self.videostream1.start_stream()
+        self.videostream2.start_stream()
         while self.sock.socket_listening:
             connection, addr = self.sock.accept()
             if self.device_manager.device_exist(addr):
@@ -133,8 +137,24 @@ class SecurityServer(object):
                 if motion_detected1 or motion_detected2:
                     self.security_config.system_breached = True
                     self.hwcontroller.status_led_flash_start()
-                    # Send notification to client (System breach)
+                    self.sock.send_data(SecurityServer._SYSTEM_BREACHED)
+                    system_breach_thread = Thread(target=self._system_breached_thread, args=())
             time.sleep(0.2)
+
+    def _system_breached_thread(self):
+        # video recorder
+        fourcc = cv2.cv.CV_FOURCC(*'XVID')  # cv2.VideoWriter_fourcc() does not exist
+        video_writer1 = cv2.VideoWriter("system-breach-stream1-{:%Y-%m-%d %-I:%M %p}.avi".format(datetime.datetime().now()),
+                                       fourcc, 20, (680, 480))
+        video_writer2 = cv2.VideoWriter("system-breach-stream2-{:%Y-%m-%d %-I:%M %p}.avi".format(datetime.datetime().now()),
+                                       fourcc, 20, (680, 480))
+        while self.security_config.system_breached:
+            status1, frame1 = self.videostream1.read()
+            status2, frame2 = self.videostream2.read()
+            if status1:
+                video_writer1.write(frame1)
+            if status2:
+                video_writer2.write(frame2)
 
     def _videostream_thread(self, stream):
         """thread for streaming video data to socket"""
@@ -154,9 +174,6 @@ class SecurityServer(object):
         args:
             connection: socket.connection object
         """
-        self.videostream1.start_stream()
-        self.videostream2.start_stream()
-
         while True:
             if first_conn:
                 first_conn = False
