@@ -37,6 +37,7 @@ class DeviceManager(object):
     """manages clients connected to socket"""
 
     _DEFAULT_DEVICES_FILE = 'devices.yaml'
+    _DEVICE_LIMIT = 3
 
     def __init__(self, file_name=None):
         self.devices = {}
@@ -103,10 +104,11 @@ class DeviceManager(object):
         args:
             addr: str
         """
-        new_device = Device(addr)
-        new_device.name = name
-        self.devices[addr] = new_device
-        self.addrs_to_store.append(addr)
+        if len(self.devices) >= DeviceManager._DEVICE_LIMIT:
+            new_device = Device(addr)
+            new_device.name = name
+            self.devices[addr] = new_device
+            self.addrs_to_store.append(addr)
 
     def find_device(self, addr):
         """fetches a device in device manager
