@@ -71,6 +71,7 @@ class Config(object):
         """resets attributes back to original settings"""
         self.values['system_armed'] = False
         self.values['cameras_live'] = False
+        self.values['system_breached'] = False
 
     @property
     def system_armed(self):
@@ -87,3 +88,11 @@ class Config(object):
     @cameras_live.setter
     def cameras_live(self, value):
         self.values['cameras_live'] = value
+
+    @property
+    def system_breached(self):
+        return self.values.get('system_breached')
+
+    @system_breached.setter
+    def system_breached(self, value):
+        self.values['system_breached'] = value

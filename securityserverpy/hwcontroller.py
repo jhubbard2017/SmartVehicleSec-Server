@@ -75,9 +75,9 @@ class HardwareController(object):
 
         for i in range(flashes):
             GPIO.output(HardwareController._STATUS_LED, GPIO.HIGH)
-            time.sleep(0.5)
+            time.sleep(0.3)
             GPIO.output(HardwareController._STATUS_LED, GPIO.LOW)
-            time.sleep(0.5)
+            time.sleep(0.3)
 
     def status_led_flash_start(self):
         """flash status led continuously

@@ -30,13 +30,19 @@ class SecurityServer(object):
     _VIEW_CAMERA_FEED1 = 'VIEWCAMERAFEED1'
     _VIEW_CAMERA_FEED2 = 'VIEWCAMERAFEED2'
     _FALSE_ALARM = 'FALSEALARM'
-    _CONTACT_DISPATCHER = 'CONTACTDISPATCHER'
     _NEWDEVICE = 'NEWDEVICE'
     _STOP_VIDEO_STREAM = 'STOPVIDEOSTREAM'
 
     # Data to be sent to clients
     _SUCCESS = 'SUCCESS'
     _FAILURE = 'FAILURE'
+
+    # status LED flash signals
+    _FLASH_NEW_DEVICE = 3
+    _FLASH_SYSTEM_ARMED = 10
+    _FLASH_SYSTEM_DISARMED = 5
+    _FLASH_DEVICE_CONNECTED = 4
+    _FLASH_SERVER_ON = 3
 
     def __init__(self, port):
         self.port = port
@@ -87,6 +93,7 @@ class SecurityServer(object):
         already_exist = self.device_manager.device_exist(addr)
         if not already_exist:
             self.device_manager.add_device(addr, name)
+            self.hwcontroller.status_led_flash(SecurityServer._FLASH_NEW_DEVICE)
         return already_exist
 
     def _arm_system(self):
@@ -96,8 +103,9 @@ class SecurityServer(object):
             bool
         """
         self.security_config.system_armed = True
-        # Todo: status led on
         # Todo: Maybe lock doors if not already locked
+        self.hwcontroller.status_led_flash(SecurityServer._FLASH_SYSTEM_ARMED)
+        self.hwcontroller.status_led_on()
         system_armed_thread = Thread(target=self._system_armed_thread, args=())
         system_armed_thread.start()
 
@@ -112,7 +120,7 @@ class SecurityServer(object):
         self.security_config.system_armed = False
         if self.security_config.cameras_live:
             self.security_config.cameras_live = False
-        # Todo: status led off
+        self.hwcontroller.status_led_flash(SecurityServer._FLASH_SYSTEM_DISARMED)
         # Todo: Maybe unlock doors if not already unlocked
 
         return not self.security_config.system_armed
@@ -123,9 +131,9 @@ class SecurityServer(object):
             status2, _, motion_detected2 = self.videostream2.get_frame()
             if status1 or status2:
                 if motion_detected1 or motion_detected2:
+                    self.security_config.system_breached = True
+                    self.hwcontroller.status_led_flash_start()
                     # Send notification to client (System breach)
-                    # Todo: status led flash
-                    pass
             time.sleep(0.2)
 
     def _videostream_thread(self, stream):
@@ -198,12 +206,11 @@ class SecurityServer(object):
                     self.security_config.cameras_live = False
                     self.sock.send_data(SecurityServer._SUCCESS)
 
-            elif data == SecurityServer._CONTACT_DISPATCHER:
-                # send message to dispatchers about break in
-                pass
             elif data == SecurityServer._FALSE_ALARM:
-                # system breach false alarm
-                pass
+                # System breach false alarm
+                if self.security_config.system_breached:
+                    self.security_config.system_breached = False
+                    self.sock.send_data(SecurityServer._SUCCESS)
 
         self.sock.close()
         self.security_config.store_config()
