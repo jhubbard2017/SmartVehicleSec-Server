@@ -27,20 +27,14 @@ class Sock(object):
 
     _SERVER_LISTEN_TIMEOUT = 5
     _SERVER_RECV_BYTES = 1024
+    _DEFAULT_PORT = 2200
 
-    def __init__(self, port, host=None, sock=None):
-        self._port = port
+    def __init__(self, port=None, host=None, sock=None):
+        self._port = port or Sock._DEFAULT_PORT
+        self._host = host or socket.gethostbyname(socket.getfqdn())
+        self._socket = socket or socket.socket()
         self._socket_listening = False
         self._connection = None
-        if not sock:
-            self._socket = socket.socket()
-        else:
-            self._socket = sock
-        if not host:
-            self._host = socket.gethostbyname(socket.getfqdn())
-        else:
-            self._host = host
-
         self._connected_addr = None
 
     def setup_socket(self):
@@ -52,7 +46,7 @@ class Sock(object):
             _logger.error('Socket binding failed: code[{0}] message[{1}]'.format(error[0], error[1]))
             return False
 
-        _logger.debug('Socket binding successful.')
+        _logger.debug('Socket set up successful')
 
         # allows socket to start listening for incoming connection request
         self._socket.listen(Sock._SERVER_LISTEN_TIMEOUT)
@@ -69,7 +63,7 @@ class Sock(object):
         """
         self._connection, self._connected_addr = sock.accept()
         _logger.debug('Recieving connection: address[{0}]'.format(self._connected_addr[0]))
-        return self._connection
+        return self._connection, self._connected_addr
 
     def close(self):
         """ends the socket connection"""
