@@ -29,10 +29,10 @@ class Sock(object):
     _SERVER_RECV_BYTES = 1024
     _DEFAULT_PORT = 2200
 
-    def __init__(self, port=None, host=None, sock=None):
+    def __init__(self, port=None):
         self._port = port or Sock._DEFAULT_PORT
-        self._host = host or socket.gethostbyname(socket.getfqdn())
-        self._socket = socket or socket.socket()
+        self._host = socket.gethostbyname('localhost')      # socket.gethostbyname(socket.getfqdn())
+        self._socket = socket.socket()
         self._socket_listening = False
         self._connection = None
         self._connected_addr = None
@@ -61,7 +61,7 @@ class Sock(object):
         returns:
             socket.connection object
         """
-        self._connection, self._connected_addr = sock.accept()
+        self._connection, self._connected_addr = self._socket.accept()
         _logger.debug('Recieving connection: address[{0}]'.format(self._connected_addr[0]))
         return self._connection, self._connected_addr
 

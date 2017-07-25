@@ -25,10 +25,7 @@ def _config_from_args():
         '-p', '--port', dest='port', default=None, required=False,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
-        '-i', '--host', dest='host', default=None, required=False,
-        help='Host IP Address.')
-    optional_argument_group.add_argument(
-        '-g', '--no_hardware', dest='no_hardware', default=None, required=False,
+        '-g', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
         help='Will not attempt to use any hardware.')
 
     return parser.parse_args()
@@ -50,8 +47,8 @@ def main():
     _config_logging()
     config = _config_from_args()
 
-    sec_server = SecurityServer(port=config.port, host=config.host, no_hardware=config.no_hardware)
-    # sec_server.start()
+    sec_server = SecurityServer(port=int(config.port), no_hardware=config.no_hardware)
+    sec_server.start()
 
 
 if __name__ == '__main__':
