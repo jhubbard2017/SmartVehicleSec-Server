@@ -46,8 +46,12 @@ def main():
     """
     _config_logging()
     config = _config_from_args()
+    if config.port:
+        port = int(config.port)
+    else:
+        port = None
 
-    sec_server = SecurityServer(port=int(config.port), no_hardware=config.no_hardware)
+    sec_server = SecurityServer(port=port, no_hardware=config.no_hardware)
     sec_server.start()
 
 

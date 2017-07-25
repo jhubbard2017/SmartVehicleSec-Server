@@ -4,9 +4,14 @@ Python server software for the Smart Vehicle Security System.
 ## Usage Examples
 ### running on local machine
 - this example assumes a python virtual env has already been established - see details on virtual env
-- this example performs a dryrun which doesn't send data to connect clients
+- this example does not trigger any calls to hardware devices
 ```shell
-(venv-securityserverpy) $ securityserverpy --dryrun
+(venv-securityserverpy) $ securityserverpy -g
+```
+
+### running with specified port
+```shell
+(venv-securityserverpy) $ securityserverpy -p 8000
 ```
 
 ### running on raspberry pi
@@ -26,7 +31,7 @@ then fill out the missing values in the config file.
 
 ## Config Values
 - `system_armed` security system is armed
-- `system_disarmed` security system is disarmed
+- `system_breached` security system has been breached
 - `cameras_live` cameras are currently live and/or recording
 
 ## Devices File
