@@ -47,7 +47,7 @@ class SecurityServer(object):
     _FLASH_DEVICE_CONNECTED = 4
     _FLASH_SERVER_ON = 3
 
-    def __init__(self, port=None, host=None, no_hardare=None):
+    def __init__(self, port=None, no_hardware=False):
         """constructor method for SecurityServer
 
         HardwareController: used to control all pieces of hardware connected to the raspberry pi
@@ -56,12 +56,11 @@ class SecurityServer(object):
         VideoStreamer: module to control video streaming to clients from server, and motion detection
         """
         self.port = port
-        self.host = host
-        self.sock = Sock(port=self.port, host=self.host)
+        self.sock = Sock(port=self.port)
         self.device_manager = DeviceManager()
         self.security_config = Config(SecurityServer._CONFIG_FILE)
 
-        self.no_hardware = no_hardare or False
+        self.no_hardware = no_hardware
         if not self.no_hardware:
             self.hwcontroller = HardwareController()
             self.videostream1 = VideoStreamer(camera=SecurityServer._DEFAULT_CAMERA1_ID)
