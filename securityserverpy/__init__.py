@@ -35,7 +35,7 @@ default_logging_config = {
             'level': logging.INFO,
             'propagate': False,
         },
-        'securityserver': {
+        'securityserverpy': {
             'handlers': [
                 'stdout',
             ],
