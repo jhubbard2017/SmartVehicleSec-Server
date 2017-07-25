@@ -1,12 +1,1 @@
-# to create a real config file: `cp config.yaml.example config.yaml`
-# then add proper values in the config file
-# see the README.md for more details.
-
-# system is currently armed
-system_armed: False
-
-# Cameras are live
-cameras_live: False
-
-# system has been breached
-system_breached: False
+{cameras_live: false, system_armed: false, system_breached: false}
