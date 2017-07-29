@@ -27,8 +27,13 @@ class UDPSock(object):
 
     def __init__(self, ip, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-        self.client = (ip, port)
+        self.sock.bind((ip, port))
 
-    def send_data(self, data):
+    def get_data(self):
+        data, address = self.sock.recvfrom(4096)
+        if data:
+            return True, address
+
+    def send_data(self, data, address):
         """sends data to sock to be retrieved by client"""
-        self.sock.sendto(data, self.client)
+        self.sock.sendto(data, address)

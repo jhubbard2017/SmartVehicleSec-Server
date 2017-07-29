@@ -44,11 +44,13 @@ class VideoStreamer(object):
     def _stream_thread(self):
         if not self.no_hardware:
             while self._stream_running:
-                status, data, _ = self.stream.get_frame()
-                if status:
-                    self.sock.send_data(data)
-                else:
-                    self.sock.send_data(404)
+                data, addr = self.sock.get_data()
+                if data:
+                    status, data_to_send, _ = self.stream.get_frame()
+                    if status:
+                        self.sock.send_data(data, addr)
+                    else:
+                        self.sock.send_data(404, addr)
 
 
     def stop_stream(self):
