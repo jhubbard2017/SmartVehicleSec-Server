@@ -1,6 +1,6 @@
 --extra-index-url https://pypi.python.org/pypi
 xmltodict
-PyYAML
+pickle
 opencv-python
 imutils
 flask
