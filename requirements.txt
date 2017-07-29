@@ -3,3 +3,4 @@ xmltodict
 PyYAML
 opencv-python
 imutils
+flask

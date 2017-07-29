@@ -96,3 +96,7 @@ class Config(object):
     @system_breached.setter
     def system_breached(self, value):
         self.values['system_breached'] = value
+
+    @property
+    def config(self):
+        return self.values

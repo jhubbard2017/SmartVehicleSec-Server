@@ -4,7 +4,9 @@
 #
 
 import cv2
+from threading import Thread
 
+from securityserverpy.sock import UDPSock
 from securityserverpy import _logger
 
 
@@ -13,27 +15,51 @@ class VideoStreamer(object):
 
     _STREAM_MIN_AREA = 500
 
-    def __init__(self, camera=0):
+    def __init__(self, camera, ip_address, port, no_hardware):
         """set the video object from the camera number
 
         Default camera # is 0. This simply enables usb camera to be used by openCV
         """
         self._camera = camera
-        self.stream = None
+        self.stream = cv2.VideoCapture(self._camera)
+        self.no_hardware = no_hardware
         self.firstframe = None
         self._stream_running = False
+        self.sock = UDPSock(ip_address, port)
 
     def start_stream(self):
         """starts the stream for the camera"""
-        self.stream = cv2.VideoCapture(self._camera)
-        if not self._stream_running:
-            self._stream_running = True
+        if not self.no_hardware:
+            if not self._stream_running:
+                self._stream_running = True
+                stream_thread = Thread(target=self._stream_thread)
+                stream_thread.start()
+                return True
+        else:
+            return True
+
+        return False
+
+
+    def _stream_thread(self):
+        if not self.no_hardware:
+            while self._stream_running:
+                status, data, _ = self.stream.get_frame()
+                if status:
+                    self.sock.send_data(data)
+                else:
+                    self.sock.send_data(404)
+
 
     def stop_stream(self):
         """stops the stream for the camera"""
-        self.stream.release()
         if self._stream_running:
             self._stream_running = False
+
+        return not self._stream_running
+
+    def release_stream(self):
+        self.stream.release()
 
     def get_frame(self):
         """reads a frame from the camera stream and converts it to bytes to send
@@ -107,17 +133,9 @@ class VideoStreamer(object):
         return detected
 
     @property
-    def camera(self):
-        return self._camera
-
-    @camera.setter
-    def camera(self, value):
-        self._camera = value
-
-    @property
     def stream_running(self):
         return self._stream_running
 
     @stream_running.setter
     def stream_running(self, value):
-        self._stream_running = value
+        pass

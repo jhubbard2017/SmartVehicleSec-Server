@@ -22,7 +22,13 @@ def _config_from_args():
 
     optional_argument_group = parser.add_argument_group('optional arguments')
     optional_argument_group.add_argument(
-        '-p', '--port', dest='port', default=None, required=False,
+        '-i', '--host', dest='host', default=None, required=True,
+        help='Port number used for clients to access server. ')
+    optional_argument_group.add_argument(
+        '-hp', '--httpport', dest='http_port', default=None, required=True,
+        help='Port number used for clients to access server. ')
+    optional_argument_group.add_argument(
+        '-up', '--udpport', dest='udp_port', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
         '-g', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
@@ -46,14 +52,12 @@ def main():
     """
     _config_logging()
     config = _config_from_args()
-    if config.port:
-        port = int(config.port)
-    else:
-        port = None
 
-    sec_server = SecurityServer(port=port, no_hardware=config.no_hardware)
+    http_port = int(config.http_port)
+    udp_port = int(config.udp_port)
+
+    sec_server = SecurityServer(host=config.host, http_port=http_port, udp_port=udp_port, no_hardware=config.no_hardware)
     sec_server.start()
-
 
 if __name__ == '__main__':
     main()
