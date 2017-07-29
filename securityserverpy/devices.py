@@ -5,45 +5,20 @@
 
 import os
 import yaml
+import hashlib
 
 from securityserverpy import _logger
-
-
-class Device(object):
-    """represents a single connected device"""
-
-    def __init__(self, address, name=None):
-        self._address = address
-        self._name = name
-
-    @property
-    def address(self):
-        return self._address
-
-    @address.setter
-    def address(self, value):
-        self._address = value
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
 
 
 class DeviceManager(object):
     """manages clients connected to socket"""
 
-    _DEFAULT_DEVICES_FILE = 'devices.yaml'
-    _DEVICE_LIMIT = 3
+    _DEFAULT_DEVICES_FILE = 'yamls/devices.yaml.example'
+    _DEVICE_LIMIT = 5
 
     def __init__(self, file_name=None):
-        self.devices = {}
-        self.addrs_to_store = []
+        self.devices = []
         self.local_file_name = file_name or DeviceManager._DEFAULT_DEVICES_FILE
-        self.devices_loaded = True
         self._load_devices()
 
     def _load_devices(self):
@@ -56,18 +31,13 @@ class DeviceManager(object):
             self.devices_loaded = False
             return
 
-        # First loop should only iterate once since `devices` is the only key in the file
         for key, value in file_contents.iteritems():
             if key == 'devices':
-                for addr in value:
-                    new_device = Device(addr)
-                    self.devices[addr] = new_device
-                    self.addrs_to_store.append(addr)
+                self.devices = value
 
     def clear(self):
         """removes all members of device manager"""
-        self.devices = {}
-        self.addrs_to_store = []
+        self.devices = []
 
     def store_devices(self):
         """stores the current devices in yaml file
@@ -76,7 +46,7 @@ class DeviceManager(object):
             bool
         """
         success = True
-        to_store = {'devices': self.addrs_to_store}
+        to_store = {'devices': self.devices}
 
         try:
             with open(self.local_file_name, 'w') as fp:
@@ -87,7 +57,7 @@ class DeviceManager(object):
 
         return success
 
-    def device_exist(self, addr):
+    def device_exist(self, name):
         """check if device already exists
 
         args:
@@ -96,44 +66,33 @@ class DeviceManager(object):
         returns:
             bool
         """
-        return addr in self.addrs_to_store
+        name_hash = self.name_hash(name)
+        return name_hash in self.devices
 
-    def add_device(self, addr, name):
+    def add_device(self, name):
         """store new device in device manager
 
         args:
             addr: str
         """
         if len(self.devices) <= DeviceManager._DEVICE_LIMIT:
-            new_device = Device(addr)
-            new_device.name = name
-            self.devices[addr] = new_device
-            self.addrs_to_store.append(addr)
+            name_hash = self.name_hash(name)
+            if name_hash not in self.devices:
+                self.devices.append(name_hash)
+                return True
+        return False
 
-    def find_device(self, addr):
-        """fetches a device in device manager
-
-        args:
-            addr: str
-
-        returns:
-                Device (if found)
-                None (if not found)
-        """
-        status = addr in self.addrs_to_store
-        if status:
-            return self.devices.get(addr)
-
-        return None
-
-    def remove_device(self, addr):
+    def remove_device(self, name):
         """removes a device from device manager
 
         args:
             addr: str
         """
-        del self.devices[addr]
-        self.addrs_to_store.remove(addr)
+        name_hash = self.name_hash(name)
+        if name_hash in self.devices:
+            self.devices.remove(name_hash)
+            return True
+        return False
 
     def device_count(self):
         """gets the number of devices in Device manager
@@ -142,3 +101,8 @@ class DeviceManager(object):
             int
         """
         return len(self.devices)
+
+    def name_hash(self, name):
+        m = hashlib.sha1()
+        m.update(name.lower())
+        return m.hexdigest()

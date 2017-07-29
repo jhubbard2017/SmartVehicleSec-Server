@@ -18,7 +18,7 @@ class Config(object):
     `securityconfig.yaml` file, so they can be read as the current state of the server
     """
 
-    _DEFAULT_YAML_FILE_NAME = 'securityconfig.yaml'
+    _DEFAULT_YAML_FILE_NAME = 'yamls/securityconfig.yaml/example'
 
     def __init__(self, config_file_name=None):
         """retrieve config from the yaml file

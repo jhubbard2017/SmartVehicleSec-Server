@@ -26,14 +26,8 @@ class SecurityServer(object):
     """handles server-client communication and processing of data sent and recieved"""
 
     # Constants
-    _CONFIG_FILE = 'serverconfig.yaml.example'
+    _CONFIG_FILE = 'yamls/securityconfig.yaml.example'
     _DEFAULT_CAMERA_ID = 0
-
-    # Data to be sent to clients
-    _SUCCESS = 'SUCCESS'
-    _FAILURE = 'FAILURE'
-    _SYSTEM_BREACHED = 'SYSTEMBREACHED'
-    _UNKNOWNREQUEST = 'UNKNOWNREQUEST'
 
     # status LED flash signals
     _FLASH_NEW_DEVICE = 3
@@ -64,23 +58,47 @@ class SecurityServer(object):
 
         @app.errorhandler(_FAILURE_CODE)
         def not_found(error):
-            return jsonify({'error': 'Not found'})
+            return jsonify({'code': _FAILURE_CODE,'error': 'Not found'})
 
         @app.route('/system/config/all', methods=['GET'])
         def get_config():
-            return jsonify({'data': self.security_config.config})
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.config})
 
         @app.route('/system/config/system_armed', methods=['GET'])
         def get_system_armed():
-            return jsonify({'data': self.security_config.system_armed})
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_armed})
 
         @app.route('/system/config/cameras_live', methods=['GET'])
         def get_cameras_live():
-            return jsonify({'data': self.security_config.cameras_live})
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.cameras_live})
 
         @app.route('/system/config/system_breached', methods=['GET'])
         def get_system_breached():
-            return jsonify({'data': self.security_config.system_breached})
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
 
         @app.route('/system/devices', methods=['POST'])
         def add_new_device():
@@ -88,24 +106,28 @@ class SecurityServer(object):
 
             Todo: check if this actually works
             """
-            if not request.json or not 'ip_address' in request.json:
+            if not request.json or not 'name' in request.json:
                 abort(_FAILURE_CODE)
             else:
-                already_exist = self.device_manager.device_exist(request.json['ip_address'])
-                if not already_exist:
-                    addr = request.json['ip_address']
-                    name = request.json['name']
-                    self.device_manager.add_device(addr, name)
+                name = request.json['name']
+                success = self.device_manager.add_device(name)
+                if success:
                     if not self.no_hardware:
                         self.hwcontroller.status_led_flash(SecurityServer._FLASH_NEW_DEVICE)
                 else:
                     abort(_FAILURE_CODE)
-            return jsonify({'data': True})
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
             """Arms or disarms the system, depending on whether the request is true or false"""
-            if request == True:
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            if request['data'] == True:
                 # Arm system
                 if not self.security_config.system_armed:
                     self.security_config.system_armed = True
@@ -119,7 +141,7 @@ class SecurityServer(object):
 
                 system_armed_thread = Thread(target=self._system_armed_thread)
                 system_armed_thread.start()
-            elif request == False:
+            elif request['data'] == False:
                 # Disarm system
                 if self.security_config.system_armed:
                     self.security_config.system_armed = False
@@ -131,27 +153,47 @@ class SecurityServer(object):
                 if not self.no_hardware:
                     self.hwcontroller.status_led_flash(SecurityServer._FLASH_SYSTEM_DISARMED)
 
-            return jsonify({'data': True})
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/logs', methods=['GET'])
         def get_logs():
-            return jsonify({'data': self.logs})
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.logs})
 
         @app.route('/system/video', methods=['POST'])
         def toggle_camera_stream():
-            if request and not self.no_hardware:
-                status = self.videostream.start_stream()
-            elif not request and not self.no_hardware:
-                status = self.videostream.stop_stream()
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
             else:
-                return jsonify({'data': False})
-            return jsonify({'data': status})
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
+            if request['data']:
+                if not self.no_hardware:
+                    status = self.videostream.start_stream()
+            elif not request['data']:
+                if not self.no_hardware:
+                    status = self.videostream.stop_stream()
+            else:
+                return jsonify({'code': _FAILURE_CODE, 'data': False})
+            return jsonify({'code': _SUCCESS_CODE, 'data': status})
 
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
+            if not request.json or not 'name' in request.json:
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    abort(_FAILURE_CODE)
             if self.security_config.system_breached:
                 self.security_config.system_breached = False
-            return jsonify({'data': not self.security_config.system_breached})
+            return jsonify({'code': _SUCCESS_CODE, 'data': not self.security_config.system_breached})
 
     def _system_armed_thread(self):
         """starts once the system has been armed
@@ -205,12 +247,13 @@ class SecurityServer(object):
                 if status:
                     video_writer.write(frame)
 
-    def _save_settings(self):
+    def save_settings(self):
         """method is fired when the user disconnects or the socket connection is broken"""
         _logger.debug('Saving security session.')
         self.security_config.store_config()
-        self.videostream.release_stream()
         self.device_manager.store_devices()
+        if not self.no_hardware:
+            self.videostream.release_stream()
 
     def start(self):
         app.run(host=self.host, port=self.http_port)
