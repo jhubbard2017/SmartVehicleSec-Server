@@ -36,7 +36,7 @@ class SecurityServer(object):
     _FLASH_DEVICE_CONNECTED = 4
     _FLASH_SERVER_ON = 3
 
-    def __init__(self, host, http_port, udp_port, no_hardware=False):
+    def __init__(self, host, http_port, udp_port, no_hardware=False, no_video=False):
         """constructor method for SecurityServer
 
         HardwareController: used to control all pieces of hardware connected to the raspberry pi
@@ -52,13 +52,15 @@ class SecurityServer(object):
         self.logs = []
 
         self.no_hardware = no_hardware
+        self.no_video = no_video
         if not self.no_hardware:
             self.hwcontroller = HardwareController()
-            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.host, self.udp_port, self.no_hardware)
+        if not self.no_video:
+            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.host, self.udp_port, self.no_video)
 
         @app.errorhandler(_FAILURE_CODE)
         def not_found(error):
-            return jsonify({'code': _FAILURE_CODE,'error': 'Not found'})
+            return jsonify({'code': _FAILURE_CODE,'data': 'Not found'})
 
         @app.route('/system/config/all', methods=['GET'])
         def get_config():
@@ -174,10 +176,10 @@ class SecurityServer(object):
                 if not self.device_manager.device_exist(name):
                     abort(_FAILURE_CODE)
             if request['data']:
-                if not self.no_hardware:
+                if not self.no_video:
                     status = self.videostream.start_stream()
             elif not request['data']:
-                if not self.no_hardware:
+                if not self.no_video:
                     status = self.videostream.stop_stream()
             else:
                 return jsonify({'code': _FAILURE_CODE, 'data': False})
@@ -211,7 +213,7 @@ class SecurityServer(object):
         """
         _logger.debug('System armed.')
         while self.security_config.system_armed:
-            if not self.no_hardware:
+            if not self.no_hardware and not self.no_video:
                 status, _, motion_detected = self.videostream.get_frame()
                 if status and motion_detected:
                     self.security_config.system_breached = True
