@@ -15,21 +15,21 @@ class VideoStreamer(object):
 
     _STREAM_MIN_AREA = 500
 
-    def __init__(self, camera, ip_address, port, no_hardware):
+    def __init__(self, camera, ip_address, port, no_video):
         """set the video object from the camera number
 
         Default camera # is 0. This simply enables usb camera to be used by openCV
         """
         self._camera = camera
         self.stream = cv2.VideoCapture(self._camera)
-        self.no_hardware = no_hardware
+        self.no_video = no_video
         self.firstframe = None
         self._stream_running = False
         self.sock = UDPSock(ip_address, port)
 
     def start_stream(self):
         """starts the stream for the camera"""
-        if not self.no_hardware:
+        if not self.no_video:
             if not self._stream_running:
                 self._stream_running = True
                 stream_thread = Thread(target=self._stream_thread)
@@ -42,7 +42,7 @@ class VideoStreamer(object):
 
 
     def _stream_thread(self):
-        if not self.no_hardware:
+        if not self.no_video:
             while self._stream_running:
                 data, addr = self.sock.get_data()
                 if data:

@@ -35,7 +35,10 @@ def _config_from_args():
         '-up', '--udpport', dest='udp_port', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
-        '-g', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
+        '-nh', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
+        help='Will not attempt to use any hardware.')
+    optional_argument_group.add_argument(
+        '-nv', '--no_video', dest='no_video', action='store_true', default=False, required=False,
         help='Will not attempt to use any hardware.')
 
     return parser.parse_args()
@@ -54,7 +57,8 @@ def main_thread():
 config = _config_from_args()
 http_port = int(config.http_port)
 udp_port = int(config.udp_port)
-sec_server = SecurityServer(host=config.host, http_port=http_port, udp_port=udp_port, no_hardware=config.no_hardware)
+sec_server = SecurityServer(host=config.host, http_port=http_port, udp_port=udp_port,
+                            no_hardware=config.no_hardware, no_video=config.no_video)
 
 def main():
     """ main function
