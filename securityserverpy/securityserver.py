@@ -26,7 +26,6 @@ class SecurityServer(object):
     """handles server-client communication and processing of data sent and recieved"""
 
     # Constants
-    _CONFIG_FILE = 'yamls/securityconfig.yaml.example'
     _DEFAULT_CAMERA_ID = 0
 
     # status LED flash signals
@@ -48,7 +47,7 @@ class SecurityServer(object):
         self.http_port = http_port
         self.udp_port = udp_port
         self.device_manager = DeviceManager()
-        self.security_config = Config(SecurityServer._CONFIG_FILE)
+        self.security_config = Config()
         self.logs = []
 
         self.no_hardware = no_hardware
@@ -60,46 +59,61 @@ class SecurityServer(object):
 
         @app.errorhandler(_FAILURE_CODE)
         def not_found(error):
-            return jsonify({'code': _FAILURE_CODE,'data': 'Not found'})
+            return jsonify({'code': _FAILURE_CODE,'data': 0})
 
-        @app.route('/system/config/all', methods=['GET'])
+        @app.route('/system/config/all', methods=['POST'])
         def get_config():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
+            _logger.debug("Successful! Sending all security config to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.config})
 
-        @app.route('/system/config/system_armed', methods=['GET'])
+        @app.route('/system/config/system_armed', methods=['POST'])
         def get_system_armed():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Sending security config (system_armed) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_armed})
 
-        @app.route('/system/config/cameras_live', methods=['GET'])
+        @app.route('/system/config/cameras_live', methods=['POST'])
         def get_cameras_live():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Sending security config (cameras_live) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.cameras_live})
 
-        @app.route('/system/config/system_breached', methods=['GET'])
+        @app.route('/system/config/system_breached', methods=['POST'])
         def get_system_breached():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Sending security config (system_breached) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
 
         @app.route('/system/devices', methods=['POST'])
@@ -109,6 +123,7 @@ class SecurityServer(object):
             Todo: check if this actually works
             """
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
@@ -117,19 +132,23 @@ class SecurityServer(object):
                     if not self.no_hardware:
                         self.hwcontroller.status_led_flash(SecurityServer._FLASH_NEW_DEVICE)
                 else:
+                    _logger.debug("Error. Failure adding device.")
                     abort(_FAILURE_CODE)
+            _logger.debug("Successful! Added new device to system.")
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
             """Arms or disarms the system, depending on whether the request is true or false"""
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
-            if request['data'] == True:
+            if request.json['data'] == True:
                 # Arm system
                 if not self.security_config.system_armed:
                     self.security_config.system_armed = True
@@ -143,11 +162,12 @@ class SecurityServer(object):
 
                 system_armed_thread = Thread(target=self._system_armed_thread)
                 system_armed_thread.start()
-            elif request['data'] == False:
+            elif request.json['data'] == False:
                 # Disarm system
                 if self.security_config.system_armed:
                     self.security_config.system_armed = False
                 else:
+                    _logger.debug("Error. System already armed.")
                     abort(_FAILURE_CODE)
 
                 if self.security_config.cameras_live:
@@ -160,42 +180,52 @@ class SecurityServer(object):
         @app.route('/system/logs', methods=['GET'])
         def get_logs():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
             return jsonify({'code': _SUCCESS_CODE, 'data': self.logs})
 
         @app.route('/system/video', methods=['POST'])
         def toggle_camera_stream():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
-            if request['data']:
+            if request.json['data']:
                 if not self.no_video:
                     status = self.videostream.start_stream()
-            elif not request['data']:
+            elif not request.json['data']:
                 if not self.no_video:
                     status = self.videostream.stop_stream()
             else:
                 return jsonify({'code': _FAILURE_CODE, 'data': False})
-            return jsonify({'code': _SUCCESS_CODE, 'data': status})
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
             if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
             else:
                 name = request.json['name']
                 if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
             if self.security_config.system_breached:
                 self.security_config.system_breached = False
-            return jsonify({'code': _SUCCESS_CODE, 'data': not self.security_config.system_breached})
+            if not self.security_config.system_breached:
+                data = 1
+            else:
+                data = 0
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
     def _system_armed_thread(self):
         """starts once the system has been armed
@@ -252,6 +282,12 @@ class SecurityServer(object):
     def save_settings(self):
         """method is fired when the user disconnects or the socket connection is broken"""
         _logger.debug('Saving security session.')
+
+        # Clear device list and reset security config for testing
+        # Todo: change during production
+        self.security_config.reset_config()
+        self.device_manager.clear()
+
         self.security_config.store_config()
         self.device_manager.store_devices()
         if not self.no_hardware:

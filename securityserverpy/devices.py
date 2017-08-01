@@ -13,7 +13,7 @@ from securityserverpy import _logger
 class DeviceManager(object):
     """manages clients connected to socket"""
 
-    _DEFAULT_DEVICES_FILE = 'yamls/devices.yaml.example'
+    _DEFAULT_DEVICES_FILE = 'yamls/devices.yaml'
     _DEVICE_LIMIT = 5
 
     def __init__(self, file_name=None):
