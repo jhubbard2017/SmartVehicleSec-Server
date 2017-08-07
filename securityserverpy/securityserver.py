@@ -9,6 +9,7 @@ import hashlib
 import imutils
 import datetime
 from flask import Flask, jsonify, request, abort, make_response
+import requests
 
 from securityserverpy import _logger
 from securityserverpy.devices import DeviceManager
@@ -27,6 +28,7 @@ class SecurityServer(object):
 
     # Constants
     _DEFAULT_CAMERA_ID = 0
+    _GEOIP_HOSTNAME = "http://freegeoip.net/json"
 
     # status LED flash signals
     _FLASH_NEW_DEVICE = 3
@@ -227,6 +229,20 @@ class SecurityServer(object):
                 data = 0
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
+        @app.route('/system/location', methods=["POST"])
+        def get_location_coordinates():
+            if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
+                    abort(_FAILURE_CODE)
+
+            position = self._fetch_location_coordinates()
+            return jsonify({'code': _SUCCESS_CODE, 'data': position})
+
     def _system_armed_thread(self):
         """starts once the system has been armed
 
@@ -295,3 +311,17 @@ class SecurityServer(object):
 
     def start(self):
         app.run(host=self.host, port=self.http_port)
+
+    def _fetch_location_coordinates(self):
+        """fetches the location coordinates of the system, using the freegeoip/ host
+
+        returns:
+            dict
+        """
+        geo = requests.get(self._GEOIP_HOSTNAME)
+        json_data = geo.json()
+        position = {
+            "latitude": float(json_data["latitude"]),
+            "longitude": float(json_data["longitude"])
+        }
+        return position
