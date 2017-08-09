@@ -16,6 +16,9 @@ from securityserverpy.config import Config
 from securityserverpy.videostreamer import VideoStreamer
 
 
+_SUCCESS_CODE = 201
+_FAILURE_CODE = 404
+
 app = Flask(__name__)
 
 class SecurityServer(object):
@@ -31,8 +34,6 @@ class SecurityServer(object):
     # Constants
     _DEFAULT_CAMERA_ID = 0
     _GEOIP_HOSTNAME = "http://freegeoip.net/json"
-    _SUCCESS_CODE = 201
-    _FAILURE_CODE = 404
 
     # status LED flash signals
     _FLASH_NEW_DEVICE = 3
