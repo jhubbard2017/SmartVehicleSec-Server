@@ -4,7 +4,6 @@
 #
 
 import os
-import xmltodict
 from argparse import ArgumentParser
 from threading import Thread
 import sys
@@ -13,7 +12,6 @@ from securityserverpy import _logger
 from securityserverpy.version import __version__
 from securityserverpy.securityserver import SecurityServer
 
-sec_server = None
 
 def _config_from_args():
     """sets up argparse to parse command line args
@@ -51,6 +49,7 @@ def _config_logging():
         _logger.warn('set log level [{0}]'.format(log_level))
 
 def main_thread():
+    """main thread to start up the server"""
     sec_server.start()
 
 # Make global so can be accessed when need to stop system, and safely save settings
@@ -63,7 +62,8 @@ sec_server = SecurityServer(host=config.host, http_port=http_port, udp_port=udp_
 def main():
     """ main function
 
-    set up configs, connect to client, and secure their vehicle :)
+    set up configs and start server
+        - Enter 'stop' to end the server and successfully save settings
     """
     thread = Thread(target=main_thread)
     thread.daemon = True
@@ -74,6 +74,7 @@ def main():
             _logger.info("Shutting down. Saving settings.")
             sec_server.save_settings()
             sys.exit(0)
+
 
 if __name__ == '__main__':
     main()

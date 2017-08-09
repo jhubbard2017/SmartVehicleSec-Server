@@ -4,6 +4,7 @@
 #
 
 import cv2
+import imutils
 from threading import Thread
 
 from securityserverpy.sock import UDPSock
@@ -24,41 +25,6 @@ class VideoStreamer(object):
         self.stream = cv2.VideoCapture(self._camera)
         self.no_video = no_video
         self.firstframe = None
-        self._stream_running = False
-        self.sock = UDPSock(ip_address, port)
-
-    def start_stream(self):
-        """starts the stream for the camera"""
-        if not self.no_video:
-            if not self._stream_running:
-                self._stream_running = True
-                stream_thread = Thread(target=self._stream_thread)
-                stream_thread.start()
-                return True
-        else:
-            return True
-
-        return False
-
-
-    def _stream_thread(self):
-        if not self.no_video:
-            while self._stream_running:
-                data, addr = self.sock.get_data()
-                if data:
-                    status, data_to_send, _ = self.stream.get_frame()
-                    if status:
-                        self.sock.send_data(data, addr)
-                    else:
-                        self.sock.send_data(404, addr)
-
-
-    def stop_stream(self):
-        """stops the stream for the camera"""
-        if self._stream_running:
-            self._stream_running = False
-
-        return not self._stream_running
 
     def release_stream(self):
         self.stream.release()
@@ -133,11 +99,3 @@ class VideoStreamer(object):
             detected = True
 
         return detected
-
-    @property
-    def stream_running(self):
-        return self._stream_running
-
-    @stream_running.setter
-    def stream_running(self, value):
-        pass
