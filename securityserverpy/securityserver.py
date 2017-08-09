@@ -41,7 +41,7 @@ class SecurityServer(object):
     _FLASH_DEVICE_CONNECTED = 4
     _FLASH_SERVER_ON = 3
 
-    def __init__(self, host, http_port, udp_port, no_hardware=False, no_video=False):
+    def __init__(self, host, http_port, no_hardware=False, no_video=False):
         """constructor method for SecurityServer
 
         HardwareController: used to control all pieces of hardware connected to the raspberry pi
@@ -53,7 +53,6 @@ class SecurityServer(object):
         """
         self.host = host
         self.http_port = http_port
-        self.udp_port = udp_port
         self.device_manager = DeviceManager()
         self.security_config = Config()
         self.logs = []
@@ -63,7 +62,7 @@ class SecurityServer(object):
         if not self.no_hardware:
             self.hwcontroller = HardwareController()
         if not self.no_video:
-            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.host, self.udp_port, self.no_video)
+            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.no_video)
 
         # To make the REST API (Flask) methods work, we use inner methods
         # Also, all api request from the user requires a device name, which is hashed in the system.

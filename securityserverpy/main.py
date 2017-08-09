@@ -27,10 +27,7 @@ def _config_from_args():
         '-i', '--host', dest='host', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
-        '-hp', '--httpport', dest='http_port', default=None, required=True,
-        help='Port number used for clients to access server. ')
-    optional_argument_group.add_argument(
-        '-up', '--udpport', dest='udp_port', default=None, required=True,
+        '-p', '--httpport', dest='http_port', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
         '-nh', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
@@ -55,8 +52,7 @@ def main_thread():
 # Make global so can be accessed when need to stop system, and safely save settings
 config = _config_from_args()
 http_port = int(config.http_port)
-udp_port = int(config.udp_port)
-sec_server = SecurityServer(host=config.host, http_port=http_port, udp_port=udp_port,
+sec_server = SecurityServer(host=config.host, http_port=http_port,
                             no_hardware=config.no_hardware, no_video=config.no_video)
 
 def main():

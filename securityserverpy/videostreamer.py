@@ -16,7 +16,7 @@ class VideoStreamer(object):
 
     _STREAM_MIN_AREA = 500
 
-    def __init__(self, camera, ip_address, port, no_video):
+    def __init__(self, camera, no_video):
         """set the video object from the camera number
 
         Default camera # is 0. This simply enables usb camera to be used by openCV
