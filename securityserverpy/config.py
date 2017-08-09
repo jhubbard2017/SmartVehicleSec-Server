@@ -73,6 +73,9 @@ class Config(object):
         self.values['cameras_live'] = False
         self.values['system_breached'] = False
 
+
+    # Getters and setters
+
     @property
     def system_armed(self):
         return self.values.get('system_armed')

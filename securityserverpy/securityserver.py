@@ -5,10 +5,8 @@
 
 from threading import Thread
 import time
-import hashlib
-import imutils
 import datetime
-from flask import Flask, jsonify, request, abort, make_response
+from flask import Flask, jsonify, request, abort
 import requests
 
 from securityserverpy import _logger
@@ -18,17 +16,23 @@ from securityserverpy.config import Config
 from securityserverpy.videostreamer import VideoStreamer
 
 
-_SUCCESS_CODE = 201
-_FAILURE_CODE = 404
-
 app = Flask(__name__)
 
 class SecurityServer(object):
-    """handles server-client communication and processing of data sent and recieved"""
+    """handles server-client communication and processing of data sent and recieved
+
+    SecurityServer module uses Flask to allow the server to operate as a REST API server
+
+    Using this approach, we don't have to manager connections to clients and we can literally "rest"
+    when the client doesn't need to send a command or retrieve data. Only when the client needs it do we actually
+    do the work.
+    """
 
     # Constants
     _DEFAULT_CAMERA_ID = 0
     _GEOIP_HOSTNAME = "http://freegeoip.net/json"
+    _SUCCESS_CODE = 201
+    _FAILURE_CODE = 404
 
     # status LED flash signals
     _FLASH_NEW_DEVICE = 3
@@ -37,17 +41,18 @@ class SecurityServer(object):
     _FLASH_DEVICE_CONNECTED = 4
     _FLASH_SERVER_ON = 3
 
-    def __init__(self, host, http_port, udp_port, no_hardware=False, no_video=False):
+    def __init__(self, host, http_port, no_hardware=False, no_video=False):
         """constructor method for SecurityServer
 
         HardwareController: used to control all pieces of hardware connected to the raspberry pi
         DeviceManager: module used to store device information that connects to the server
         SecurityConfig: a collection of security attributes about the system (system armed, cameras live, etc.)
         VideoStreamer: module to control video streaming to clients from server, and motion detection
+
+        We use the 2 config values (no_hardware and no_video) for different development modes
         """
         self.host = host
         self.http_port = http_port
-        self.udp_port = udp_port
         self.device_manager = DeviceManager()
         self.security_config = Config()
         self.logs = []
@@ -57,14 +62,21 @@ class SecurityServer(object):
         if not self.no_hardware:
             self.hwcontroller = HardwareController()
         if not self.no_video:
-            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.host, self.udp_port, self.no_video)
+            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.no_video)
 
+        # To make the REST API (Flask) methods work, we use inner methods
+        # Also, all api request from the user requires a device name, which is hashed in the system.
+        # In order to recieve a successful request code and expected data, the device name hash must exist in our system
+
+        # Error handling
         @app.errorhandler(_FAILURE_CODE)
         def not_found(error):
             return jsonify({'code': _FAILURE_CODE,'data': 0})
 
+        # Request config
         @app.route('/system/config/all', methods=['POST'])
         def get_config():
+            """returns the security config"""
             if not request.json or not 'name' in request.json:
                 _logger.debug("Error! Name not found in request data.")
                 abort(_FAILURE_CODE)
@@ -76,6 +88,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Sending all security config to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.config})
 
+        # Request 'system armed' status from config
         @app.route('/system/config/system_armed', methods=['POST'])
         def get_system_armed():
             if not request.json or not 'name' in request.json:
@@ -90,6 +103,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Sending security config (system_armed) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_armed})
 
+        # Request 'cameras live' status from config
         @app.route('/system/config/cameras_live', methods=['POST'])
         def get_cameras_live():
             if not request.json or not 'name' in request.json:
@@ -104,6 +118,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Sending security config (cameras_live) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.cameras_live})
 
+        # Request 'system breached' status from config
         @app.route('/system/config/system_breached', methods=['POST'])
         def get_system_breached():
             if not request.json or not 'name' in request.json:
@@ -118,6 +133,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Sending security config (system_breached) to client.")
             return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
 
+        # Request add new device to system
         @app.route('/system/devices', methods=['POST'])
         def add_new_device():
             """adds new device
@@ -139,6 +155,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Added new device to system.")
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
+        # Request to arm/disarm system
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
             """Arms or disarms the system, depending on whether the request is true or false"""
@@ -179,6 +196,7 @@ class SecurityServer(object):
 
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
+        # Request to get list of system logs
         @app.route('/system/logs', methods=['GET'])
         def get_logs():
             if not request.json or not 'name' in request.json:
@@ -191,26 +209,7 @@ class SecurityServer(object):
                     abort(_FAILURE_CODE)
             return jsonify({'code': _SUCCESS_CODE, 'data': self.logs})
 
-        @app.route('/system/video', methods=['POST'])
-        def toggle_camera_stream():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-            if request.json['data']:
-                if not self.no_video:
-                    status = self.videostream.start_stream()
-            elif not request.json['data']:
-                if not self.no_video:
-                    status = self.videostream.stop_stream()
-            else:
-                return jsonify({'code': _FAILURE_CODE, 'data': False})
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
-
+        # Request to set breach as false alarm
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
             if not request.json or not 'name' in request.json:
@@ -229,6 +228,7 @@ class SecurityServer(object):
                 data = 0
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
+        # Request to get current GPS location of system
         @app.route('/system/location', methods=["POST"])
         def get_location_coordinates():
             if not request.json or not 'name' in request.json:
@@ -310,13 +310,14 @@ class SecurityServer(object):
             self.videostream.release_stream()
 
     def start(self):
+        """starts the flask app"""
         app.run(host=self.host, port=self.http_port)
 
     def _fetch_location_coordinates(self):
         """fetches the location coordinates of the system, using the freegeoip/ host
 
         returns:
-            dict
+            dict -> {'latitude': float, 'longitude': float}
         """
         geo = requests.get(self._GEOIP_HOSTNAME)
         json_data = geo.json()
