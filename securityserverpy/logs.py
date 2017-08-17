@@ -19,7 +19,7 @@ class Logs(object):
     """
 
     _DEFAULT_LOGS_FILE = 'yamls/logs.yaml'
-    _LOG_COUNT_LIMIT = 50
+    _LOG_COUNT_LIMIT = 30
 
     _USER_CONTROLLED_TYPE = 'user_controlled_type'
     _SECURITY_CONTROLLED_TYPE = 'security_controlled_type'
@@ -37,17 +37,11 @@ class Logs(object):
                 file_contents = yaml.load(fp.read())
         except (IOError, yaml.YAMLError) as exception:
             _logger.debug('Could not read file [{0}]'.format(exception))
+            self.logs_loaded = False
             return
 
-        for key, value in file_contents.iteritems():
-            if key == 'user_controlled_logs':
-                for x in value:
-                    new_log = LogItem(x['title'], x['description'], x['timestamp'])
-                    self.user_controlled_logs.append(new_log)
-            if key == 'security_controlled_logs':
-                for x in value:
-                    new_log = LogItem(x['title'], x['description'], x['timestamp'])
-                    self.security_controlled_logs.append(new_log)
+        self.user_controlled_logs = file_contents[Logs._USER_CONTROLLED_TYPE]
+        self.security_controlled_logs = file_contents[Logs._SECURITY_CONTROLLED_TYPE]
 
     def clear(self):
         """removes all members of device manager"""
@@ -61,20 +55,12 @@ class Logs(object):
             bool
         """
         success = True
-        user_controlled_logs = []
-        security_controlled_logs = []
-
-        for log in self.user_controlled_logs:
-            log_to_save = {'title': log.title, 'description': log.description, 'timestamp': log.timestamp}
-            user_controlled_logs.append(log_to_save)
-        for log in self.user_controlled_logs:
-            log_to_save = {'title': log.title, 'description': log.description, 'timestamp': log.timestamp}
-            security_controlled_logs.append(log_to_save)
 
         all_logs = {
-            'user_controlled_logs': user_controlled_logs,
-            'security_controlled_logs': security_controlled_logs
+            Logs._USER_CONTROLLED_TYPE: self.user_controlled_logs,
+            Logs._SECURITY_CONTROLLED_TYPE: self.security_controlled_logs
         }
+
         try:
             with open(self.local_file_name, 'w') as fp:
                 yaml.dump(all_logs, fp)
@@ -84,18 +70,29 @@ class Logs(object):
 
         return success
 
-    def add_log(self, title, description, type):
+    def add_log(self, info, type):
         """adds new log to the system"""
-        logs_full = len(self.user_controlled_logs) + len(self.security_controlled_logs) >= Logs._LOG_COUNT_LIMIT
-        new_log = LogItem(title, description, ":%Y-%m-%d %-I:%M %p".format(datetime.datetime().now()))
+        curr_date = datetime.datetime.now()
+        new_log = new_log = {
+            'info': info,
+            'date': ":%b %d, %Y".format(curr_date),
+            'time': "%-I:%M %p".format(curr_date)
+        }
         if type == Logs._USER_CONTROLLED_TYPE:
-            if logs_full:
+            if len(self.user_controlled_logs) >= Logs._LOG_COUNT_LIMIT:
                 del self.user_controlled_logs[0]
             self.user_controlled_logs.append(new_log)
         if type == Logs._SECURITY_CONTROLLED_TYPE:
-            if logs_full:
+            if len(self.user_controlled_logs) >= Logs._LOG_COUNT_LIMIT:
                 del self.security_controlled_logs[0]
             self.security_controlled_logs.append(new_log)
+
+    def get_logs(self):
+        all_logs = {
+            Logs._USER_CONTROLLED_TYPE: self.user_controlled_logs,
+            Logs._SECURITY_CONTROLLED_TYPE: self.security_controlled_logs
+        }
+        return all_logs
 
     def log_count(self):
         """gets total number of logs
@@ -104,10 +101,3 @@ class Logs(object):
             int
         """
         return len(self.user_controlled_logs) + len(self.security_controlled_logs)
-
-
-class LogItem(object):
-    def __init__(self, title, description, timestamp):
-        self.title = title
-        self.description = description
-        self.timestamp = timestamp

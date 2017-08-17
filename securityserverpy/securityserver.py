@@ -13,6 +13,7 @@ from securityserverpy import _logger
 from securityserverpy.devices import DeviceManager
 from securityserverpy.hwcontroller import HardwareController
 from securityserverpy.config import Config
+from securityserverpy.logs import Logs
 from securityserverpy.videostreamer import VideoStreamer
 
 
@@ -42,6 +43,10 @@ class SecurityServer(object):
     _FLASH_DEVICE_CONNECTED = 4
     _FLASH_SERVER_ON = 3
 
+    # Log constants
+    _USER_CONTROLLED_LOG_TYPE = 'user_controlled_type'
+    _SECURITY_CONTROLLED_LOG_TYPE = 'security_controlled_type'
+
     def __init__(self, host, http_port, no_hardware=False, no_video=False):
         """constructor method for SecurityServer
 
@@ -56,7 +61,7 @@ class SecurityServer(object):
         self.http_port = http_port
         self.device_manager = DeviceManager()
         self.security_config = Config()
-        self.logs = []
+        self.logs = Logs()
 
         self.no_hardware = no_hardware
         self.no_video = no_video
@@ -148,6 +153,7 @@ class SecurityServer(object):
                 name = request.json['name']
                 success = self.device_manager.add_device(name)
                 if success:
+                    self.logs.add_log("Device added - {0}".format(name), SecurityServer._USER_CONTROLLED_LOG_TYPE)
                     if not self.no_hardware:
                         self.hwcontroller.status_led_flash(SecurityServer._FLASH_NEW_DEVICE)
                 else:
@@ -172,6 +178,7 @@ class SecurityServer(object):
                 # Arm system
                 if not self.security_config.system_armed:
                     self.security_config.system_armed = True
+                    self.logs.add_log("System armed", SecurityServer._USER_CONTROLLED_LOG_TYPE)
                 else:
                     abort(_FAILURE_CODE)
 
@@ -186,6 +193,7 @@ class SecurityServer(object):
                 # Disarm system
                 if self.security_config.system_armed:
                     self.security_config.system_armed = False
+                    self.logs.add_log("System disarmed", SecurityServer._USER_CONTROLLED_LOG_TYPE)
                 else:
                     _logger.debug("Error. System already armed.")
                     abort(_FAILURE_CODE)
@@ -208,7 +216,8 @@ class SecurityServer(object):
                 if not self.device_manager.device_exist(name):
                     _logger.debug("Error. Device does not exist.")
                     abort(_FAILURE_CODE)
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.logs})
+            all_logs = self.logs.get_logs()
+            return jsonify({'code': _SUCCESS_CODE, 'data': all_logs})
 
         # Request to set breach as false alarm
         @app.route('/system/false_alarm', methods=['POST'])
@@ -223,11 +232,7 @@ class SecurityServer(object):
                     abort(_FAILURE_CODE)
             if self.security_config.system_breached:
                 self.security_config.system_breached = False
-            if not self.security_config.system_breached:
-                data = 1
-            else:
-                data = 0
-            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
 
         # Request to get current GPS location of system
         @app.route('/system/location', methods=["POST"])
@@ -286,6 +291,7 @@ class SecurityServer(object):
                 and the situation is resolved.
         """
         _logger.debug('System breached.')
+        self.logs.add_log("System breached", SecurityServer._SECURITY_CONTROLLED_LOG_TYPE)
         # video recorder
         fourcc = cv2.cv.CV_FOURCC(*'XVID')  # cv2.VideoWriter_fourcc() does not exist
         video_writer = cv2.VideoWriter("system-breach-recording-{:%Y-%m-%d %-I:%M %p}.avi".format(datetime.datetime().now()),
