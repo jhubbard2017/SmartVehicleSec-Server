@@ -47,7 +47,7 @@ class SecurityServer(object):
     _USER_CONTROLLED_LOG_TYPE = 'user_controlled_type'
     _SECURITY_CONTROLLED_LOG_TYPE = 'security_controlled_type'
 
-    def __init__(self, host, http_port, no_hardware=False, no_video=False):
+    def __init__(self, host, http_port, no_hardware=False, no_video=False, testing=False):
         """constructor method for SecurityServer
 
         HardwareController: used to control all pieces of hardware connected to the raspberry pi
@@ -65,10 +65,16 @@ class SecurityServer(object):
 
         self.no_hardware = no_hardware
         self.no_video = no_video
+
+        # Set up different configs if needed
         if not self.no_hardware:
             self.hwcontroller = HardwareController()
         if not self.no_video:
             self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.no_video)
+        if testing:
+            self.device_manager = DeviceManager(file_name='tests/data/testdevices.yaml')
+            self.security_config = Config(config_file_name='tests/data/testconfig.yaml')
+            self.logs = Logs(file_name='tests/data/testlogs.yaml')
 
         # To make the REST API (Flask) methods work, we use inner methods
         # Also, all api request from the user requires a device name, which is hashed in the system.
@@ -339,6 +345,8 @@ class SecurityServer(object):
     def start(self):
         """starts the flask app"""
         app.run(host=self.host, port=self.http_port)
+
+    def server_app(self):
         return app
 
     def _fetch_location_coordinates(self):

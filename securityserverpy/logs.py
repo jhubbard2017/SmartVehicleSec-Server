@@ -27,7 +27,7 @@ class Logs(object):
     def __init__(self, file_name=None):
         self.user_controlled_logs = []
         self.security_controlled_logs = []
-        self.local_file_name = file_name or DeviceManager._DEFAULT_DEVICES_FILE
+        self.local_file_name = file_name or Logs._DEFAULT_LOGS_FILE
         self._load_logs()
 
     def _load_logs(self):
