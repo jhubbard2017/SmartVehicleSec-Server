@@ -22,12 +22,15 @@ class VideoStreamer(object):
         Default camera # is 0. This simply enables usb camera to be used by openCV
         """
         self._camera = camera
-        self.stream = cv2.VideoCapture(self._camera)
-        self.no_video = no_video
-        self.firstframe = None
+        self._no_video = no_video
+        self._stream = None
+
+        if not self._no_video:
+            self._stream = cv2.VideoCapture(self._camera)
 
     def release_stream(self):
-        self.stream.release()
+        if not self._no_video:
+            self._stream.release()
 
     def get_frame(self):
         """reads a frame from the camera stream and converts it to bytes to send
@@ -35,67 +38,19 @@ class VideoStreamer(object):
         returns:
             bytes
         """
-        success, image = self.stream.read()
-        gray_image = self.get_gray_frame(image)
-        if self.firstframe is None:
-            self.firstframe = gray_image
-        else:
-            motion_detected = self.motion_detected(gray_image)
-        ret, image_jpeg = cv2.imencode('.jpg', image)
-        return success, image_jpeg.tobytes(), motion_detected
+        if not self._no_video:
+            success, image = self._stream.read()
+            return success, image
+        return None, None
 
-    def get_gray_frame(self, frame):
-        """converts frame to grayscale
+    @property
+    def camera(self):
+        return self._camera
 
-        args:
-            frame: image
+    @property
+    def no_video(self):
+        return self._no_video
 
-        returns:
-            image
-        """
-        frame = imutils.resize(frame, width=500)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (21, 21), 0)
-        return gray
-
-    def motion_detected(self, frame):
-        """compares frames and determines of motion has been detected or not
-
-        The first frame is considered a `no motion` frame. Comparing each of the new frames to the first frame
-        will allow us to determine if motion has been detected.
-            - If one of the contours in the threshold of the frame is greater than VideoStreamer._STREAM_MIN_AREA,
-                    then motion has been detected
-            - If one of the contours in the threshold of the frame is smaller than VideoStreamer._STREAM_MIN_AREA,
-                    then motion has not been detected
-
-        args:
-            frame: image object
-
-        returns:
-            bool
-        """
-        detected = False
-        # compute the absolute difference between the current frame and
-        # first frame
-        frameDelta = cv2.absdiff(self.firstframe, gray)
-        thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
-
-        # dilate the thresholded image to fill in holes, then find contours
-        # on thresholded image
-        thresh = cv2.dilate(thresh, None, iterations=2)
-        (cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                                     cv2.CHAIN_APPROX_SIMPLE)
-
-        # loop over the contours
-        for c in cnts:
-            # if the contour is too small, ignore it
-            if cv2.contourArea(c) < VideoStreamer._STREAM_MIN_AREA:
-                continue
-
-            # compute the bounding box for the contour, draw it on the frame,
-            # and update the text
-            (x, y, w, h) = cv2.boundingRect(c)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            detected = True
-
-        return detected
+    @property
+    def stream(self):
+        return self._stream != None
