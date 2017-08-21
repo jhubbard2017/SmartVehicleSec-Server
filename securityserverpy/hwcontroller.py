@@ -17,6 +17,7 @@ class HardwareController(object):
     _PANIC_BUTTON = 32
     _SHOCK_SENSOR = 27
     _NOISE_SENSOR = 12
+    _MOTION_SENSOR = 22
     _STATUS_LED = 17
     _THERMAL_SENSOR = 4
     _THERMAL_SENSOR_BASE_DIR = '/sys/bus/w1/devices/'
@@ -116,7 +117,7 @@ class HardwareController(object):
             with open(self.thermal_sensor_device_file, 'r') as fp:
                 data = fp.readlines()
         except IOError as exception:
-            _logger.debug('Could not write to file [{0}]'.format(exception))
+            _logger.debug('Could not read file [{0}]'.format(exception))
 
         return data
 
@@ -168,5 +169,10 @@ class HardwareController(object):
         """
         return GPIO.input(HardwareController._SHOCK_SENSOR)
 
+    def read_motion_sensor(self):
+        """fetches the current status of the motion sensoe via gpio pin
 
-
+        returns:
+            bool
+        """
+        return GPIO.input(HardwareController._MOTION_SENSOR)

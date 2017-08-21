@@ -249,6 +249,22 @@ class SecurityServer(object):
             position = self._fetch_location_coordinates()
             return jsonify({'code': _SUCCESS_CODE, 'data': position})
 
+        # Request to get current temperature
+        @app.route('/system/temperature', methods=["POST"])
+        def get_temperature():
+            if not request.json or not 'name' in request.json:
+                _logger.debug("Error! Name not found in request data.")
+                abort(_FAILURE_CODE)
+            else:
+                name = request.json['name']
+                if not self.device_manager.device_exist(name):
+                    _logger.debug("Error. Device does not exist.")
+                    abort(_FAILURE_CODE)
+
+            ctemp, ftemp = self.hwcontroller.read_thermal_sensor()
+            data = {'ctemp': ctemp, 'ftemp': ftemp}
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+
     def _system_armed_thread(self):
         """starts once the system has been armed
 
@@ -263,11 +279,13 @@ class SecurityServer(object):
             • To be on the safe side, we assume its a break in, and fire up the `system_breached_thread`
             • If motion hasnt been detected, we just continue to check until the system is disarmed
         """
-        _logger.debug('System armed.')
+        _logger.debug('System armed in 5 secs.')
+        time.sleep(5)
         while self.security_config.system_armed:
             if not self.no_hardware and not self.no_video:
-                status, _, motion_detected = self.videostream.get_frame()
-                if status and motion_detected:
+                motion_detected = self.hwcontroller.read_motion_sensor()
+                noise_detected = self.hwcontroller.read_noise_sensor()
+                if motion_detected or noise_detected:
                     self.security_config.system_breached = True
                     self.hwcontroller.status_led_flash_start()
                     system_breach_thread = Thread(target=self._system_breached_thread)
@@ -294,11 +312,11 @@ class SecurityServer(object):
         self.logs.add_log("System breached", SecurityServer._SECURITY_CONTROLLED_LOG_TYPE)
         # video recorder
         fourcc = cv2.cv.CV_FOURCC(*'XVID')  # cv2.VideoWriter_fourcc() does not exist
-        video_writer = cv2.VideoWriter("system-breach-recording-{:%Y-%m-%d %-I:%M %p}.avi".format(datetime.datetime().now()),
+        video_writer = cv2.VideoWriter("system-breach-recording-{:%b %d, %Y %-I:%M %p}.avi".format(datetime.datetime().now()),
                                        fourcc, 20, (680, 480))
         while self.security_config.system_breached:
             if not self.no_hardware:
-                status, frame, _ = self.videostream.read()
+                status, frame_jpeg, frame = self.videostream.read()
                 if status:
                     video_writer.write(frame)
 
@@ -310,15 +328,18 @@ class SecurityServer(object):
         # Todo: change during production
         self.security_config.reset_config()
         self.device_manager.clear()
+        self.logs.clear()
 
         self.security_config.store_config()
         self.device_manager.store_devices()
+        self.logs.store_logs()
         if not self.no_hardware:
             self.videostream.release_stream()
 
     def start(self):
         """starts the flask app"""
         app.run(host=self.host, port=self.http_port)
+        return app
 
     def _fetch_location_coordinates(self):
         """fetches the location coordinates of the system, using the freegeoip/ host
