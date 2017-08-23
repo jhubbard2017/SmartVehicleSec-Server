@@ -1,4 +1,5 @@
 import os
+import os.path
 import yaml
 
 from securityserverpy import _logger
@@ -48,12 +49,12 @@ class PanicResponse(object):
             PanicResponse._CONTACTS_INDEX: self.contacts
         }
 
-        try:
-            with open(self.local_file_name, 'w') as fp:
-                yaml.dump(to_store, fp)
-        except (IOError, yaml.YAMLError) as exception:
-            _logger.debug('Could not write to file [{0}]'.format(exception))
+        if not os.path.exists(self.local_file_name):
+            _logger.debug('Could not write to file [{0}]'.format(self.local_file_name))
             return not success
+
+        with open(self.local_file_name, 'w') as fp:
+            yaml.dump(to_store, fp)
 
         return success
 
@@ -69,13 +70,13 @@ class PanicResponse(object):
             bool
         """
         success = True
-        if len(self.contacts) >= PanicResponse._CONTACT_LIMIT:
+        if (len(self.contacts) >= PanicResponse._CONTACT_LIMIT) or self.contacts.get(name):
             return not success
         self.contacts[name] = {
             'phone': phone,
             'email': email
         }
-        return True
+        return success
 
     def remove_contact(self, name):
         """removes contact object (referenced from name) from contacts list

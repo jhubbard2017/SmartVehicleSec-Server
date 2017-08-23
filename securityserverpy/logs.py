@@ -61,12 +61,12 @@ class Logs(object):
             Logs._SECURITY_CONTROLLED_TYPE: self.security_controlled_logs
         }
 
-        try:
-            with open(self.local_file_name, 'w') as fp:
-                yaml.dump(all_logs, fp)
-        except (IOError, yaml.YAMLError) as exception:
-            _logger.debug('Could not write to file [{0}]'.format(exception))
+        if not os.path.exists(self.local_file_name):
+            _logger.debug('Could not write to file [{0}]'.format(self.local_file_name))
             return not success
+
+        with open(self.local_file_name, 'w') as fp:
+            yaml.dump(all_logs, fp)
 
         return success
 
@@ -83,7 +83,7 @@ class Logs(object):
                 del self.user_controlled_logs[0]
             self.user_controlled_logs.append(new_log)
         if type == Logs._SECURITY_CONTROLLED_TYPE:
-            if len(self.user_controlled_logs) >= Logs._LOG_COUNT_LIMIT:
+            if len(self.security_controlled_logs) >= Logs._LOG_COUNT_LIMIT:
                 del self.security_controlled_logs[0]
             self.security_controlled_logs.append(new_log)
 

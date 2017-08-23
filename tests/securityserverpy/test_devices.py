@@ -25,6 +25,9 @@ class TestDeviceManager(unittest.TestCase):
         manager = DeviceManager(file_name='file doesnt exist')
         self.assertFalse(manager.devices_loaded)
 
+        success = manager.store_devices()
+        self.assertFalse(success)
+
     def test_add_devices(self):
         """test add devices to device manager"""
         self.manager.add_device(self.name1)
@@ -33,6 +36,12 @@ class TestDeviceManager(unittest.TestCase):
         self.assertEqual(self.manager.device_count(), 2)
         self.assertTrue(self.manager.device_exist(self.name1))
         self.assertTrue(self.manager.device_exist(self.name2))
+
+    def test_add_device_over_limit(self):
+        for x in range(5):
+            self.manager.add_device('name{0}'.format(x))
+        success = self.manager.add_device('foo')
+        self.assertFalse(success)
 
     def test_remove_device(self):
         """test remove device from device manager"""
@@ -43,6 +52,11 @@ class TestDeviceManager(unittest.TestCase):
         self.manager.remove_device(self.name1)
         self.assertFalse(self.manager.device_exist(self.name1))
         self.assertEqual(self.manager.device_count(), 1)
+
+    def test_remove_device_not_exist(self):
+        self.manager.add_device(self.name1)
+        success = self.manager.remove_device(self.name2)
+        self.assertFalse(success)
 
     def test_device_exist(self):
         """test get device"""

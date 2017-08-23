@@ -21,6 +21,9 @@ class TestLogs(unittest.TestCase):
         logs = Logs(file_name='file doesnt exist')
         self.assertFalse(logs.logs_loaded)
 
+        success = logs.store_logs()
+        self.assertFalse(success)
+
     def test_add_logs(self):
         self.logs.add_log('my info 1', TestLogs._USER_CONTROLLED_TYPE)
         self.logs.add_log('my info 2', TestLogs._SECURITY_CONTROLLED_TYPE)
@@ -29,6 +32,24 @@ class TestLogs(unittest.TestCase):
         my_logs = self.logs.get_logs()
         self.assertEqual(my_logs[TestLogs._USER_CONTROLLED_TYPE][0]['info'], 'my info 1')
         self.assertEqual(my_logs[TestLogs._SECURITY_CONTROLLED_TYPE][0]['info'], 'my info 2')
+
+    def test_add_logs_user_log_limit(self):
+        self.logs.add_log('log-1', TestLogs._USER_CONTROLLED_TYPE)
+        for x in range(30):
+            self.logs.add_log('log{0}'.format(x), TestLogs._USER_CONTROLLED_TYPE)
+
+        all_user_logs = self.logs.get_logs()[TestLogs._USER_CONTROLLED_TYPE]
+        for log in all_user_logs:
+            self.assertNotEqual('log-1', log['info'])
+
+    def test_add_logs_system_log_limit(self):
+        self.logs.add_log('log-1', TestLogs._SECURITY_CONTROLLED_TYPE)
+        for x in range(30):
+            self.logs.add_log('log{0}'.format(x), TestLogs._SECURITY_CONTROLLED_TYPE)
+
+        all_user_logs = self.logs.get_logs()[TestLogs._SECURITY_CONTROLLED_TYPE]
+        for log in all_user_logs:
+            self.assertNotEqual('log-1', log['info'])
 
     def test_store_logs(self):
         """test store devices in yaml file"""

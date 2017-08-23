@@ -4,10 +4,7 @@
 #
 
 import cv2
-import imutils
-from threading import Thread
 
-from securityserverpy.sock import UDPSock
 from securityserverpy import _logger
 
 
