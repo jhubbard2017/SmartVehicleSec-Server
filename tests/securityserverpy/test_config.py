@@ -20,6 +20,13 @@ class TestConfig(unittest.TestCase):
         self.config.reset_config()
         self.config.store_config()
 
+    def test_config_file_error(self):
+        config = Config(config_file_name='file doesnt exist')
+        self.assertFalse(config.config_loaded)
+
+        success = config.store_config()
+        self.assertFalse(success)
+
     def test_example_yaml(self):
         self.assertIsNotNone(self.config)
         self.assertEqual(self.config.system_armed, False)

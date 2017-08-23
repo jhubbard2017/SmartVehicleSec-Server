@@ -31,9 +31,7 @@ class DeviceManager(object):
             self.devices_loaded = False
             return
 
-        for key, value in file_contents.iteritems():
-            if key == 'devices':
-                self.devices = value
+        self.devices = file_contents['devices']
 
     def clear(self):
         """removes all members of device manager"""
@@ -48,12 +46,12 @@ class DeviceManager(object):
         success = True
         to_store = {'devices': self.devices}
 
-        try:
-            with open(self.local_file_name, 'w') as fp:
-                yaml.dump(to_store, fp)
-        except (IOError, yaml.YAMLError) as exception:
-            _logger.debug('Could not write to file [{0}]'.format(exception))
+        if not os.path.exists(self.local_file_name):
+            _logger.debug('Could not write to file [{0}]'.format(self.local_file_name))
             return not success
+
+        with open(self.local_file_name, 'w') as fp:
+            yaml.dump(to_store, fp)
 
         return success
 
@@ -75,12 +73,13 @@ class DeviceManager(object):
         args:
             addr: str
         """
-        if len(self.devices) <= DeviceManager._DEVICE_LIMIT:
+        success = True
+        if len(self.devices) < DeviceManager._DEVICE_LIMIT:
             name_hash = self.name_hash(name)
             if name_hash not in self.devices:
                 self.devices.append(name_hash)
-                return True
-        return False
+                return success
+        return not success
 
     def remove_device(self, name):
         """removes a device from device manager
@@ -88,11 +87,12 @@ class DeviceManager(object):
         args:
             addr: str
         """
+        success = True
         name_hash = self.name_hash(name)
         if name_hash in self.devices:
             self.devices.remove(name_hash)
-            return True
-        return False
+            return success
+        return not success
 
     def device_count(self):
         """gets the number of devices in Device manager

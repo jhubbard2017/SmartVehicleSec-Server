@@ -44,6 +44,7 @@ class Config(object):
                 file_contents = yaml.load(fp.read())
         except (IOError, yaml.YAMLError) as exception:
             _logger.debug('Could not read file [{0}]'.format(exception))
+            self.config_loaded = False
             return
 
         for key, value in file_contents.iteritems():
@@ -58,12 +59,13 @@ class Config(object):
             bool
         """
         success = True
-        try:
-            with open(self.local_file_name, 'w') as fp:
-                yaml.dump(self.values, fp)
-        except (IOError, yaml.YAMLError) as exception:
-            _logger.debug('Could not write to file [{0}]'.format(exception))
+
+        if not os.path.exists(self.local_file_name):
+            _logger.debug('Could not write to file [{0}]'.format(self.local_file_name))
             return not success
+
+        with open(self.local_file_name, 'w') as fp:
+            yaml.dump(self.values, fp)
 
         return success
 
@@ -99,7 +101,3 @@ class Config(object):
     @system_breached.setter
     def system_breached(self, value):
         self.values['system_breached'] = value
-
-    @property
-    def config(self):
-        return self.values
