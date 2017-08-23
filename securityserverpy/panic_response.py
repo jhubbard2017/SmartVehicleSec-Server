@@ -1,6 +1,10 @@
 import os
 import os.path
 import yaml
+import smtplib
+
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from securityserverpy import _logger
 
@@ -15,6 +19,12 @@ class PanicResponse(object):
     _DEFAULT_FILE = 'yamls/contacts.yaml'
     _CONTACTS_INDEX = 'contacts'
     _CONTACT_LIMIT = 15
+
+    _MAIL_SERVER = 'smtp.gmail.com'
+    _MAIL_PORT = 587
+    _SYSTEM_EMAIL = 'smart.vehicle.sec@gmail.com'
+    _SYSTEM_PASSWORD = 'seniordesign2017'
+    _SYSTEM_EMAIL_SUBJECT = 'ALERT MESSAGE FROM [{0}]'
 
     def __init__(self, file_name=None):
         self.contacts = {}
@@ -133,12 +143,11 @@ class PanicResponse(object):
         return len(self.contacts)
 
     def send_message_all(self):
-        """sends warning message (email) to all contacts
-
-        returns:
-            bool
-        """
-        pass
+        """sends warning message (email) to all contacts"""
+        for contact in self.contacts:
+            sent = self.construct_email_and_send(contact['email'])
+            if not sent:
+                _logger.debug('Error. Email could not be sent to [{0}]'.format(contact['email']))
 
     def send_message(self, name):
         """sends warning message (email) to contact with name
@@ -146,6 +155,53 @@ class PanicResponse(object):
         returns:
             bool
         """
-        pass
+        success = True
+        if not self.contacts.get(name):
+            return not success
+        contact = self.contacts.get(name)
+        sent = self.construct_email_and_send(contact['email'])
+        if not sent:
+            _logger.debug('Error. Email could not be sent to [{0}]'.format(contact['email']))
+            return not success
+
+        return success
 
 
+    def construct_email_and_send(self, email_addr):
+        """constructs an HTML email and sends to specified recipient
+
+        args:
+            email: str
+
+        returns:
+            bool
+        """
+        success = True
+
+        email = MIMEMultipart('alternative')
+        email['Subject'] = PanicResponse._SYSTEM_EMAIL_SUBJECT.format(email)
+        email['From'] = PanicResponse._SYSTEM_EMAIL
+        email['To'] = email_addr
+
+        # Create both plaintext and html version so that email application can render either when needed
+        plaintext_version = "Plaintext version"
+        html_version = "HTML version"
+        plaintext = MIMEText(plaintext_version, 'plain')
+        html = MIMEText(html_version, 'html')
+
+        # Attach both plaintext and html to email
+        email.attach(plaintext)
+        email.attach(html)
+
+        try:
+            mail = smtplib.SMTP(PanicResponse._MAIL_SERVER, PanicResponse._MAIL_PORT)
+            mail.ehlo()
+            mail.starttls()
+            mail.login(PanicResponse._SYSTEM_EMAIL, PanicResponse._SYSTEM_PASSWORD)
+            mail.sendmail(email_addr, PanicResponse._SYSTEM_EMAIL, email.as_string())
+        except smtplib.SMTPException as e:
+            _logger.debug('Could not send email. [{0}]'.format(e))
+            mail.quit()
+            return not success
+
+        return success
