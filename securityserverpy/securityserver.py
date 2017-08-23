@@ -85,21 +85,6 @@ class SecurityServer(object):
         def not_found(error):
             return jsonify({'code': _FAILURE_CODE,'data': 0})
 
-        # Request config
-        @app.route('/system/config/all', methods=['POST'])
-        def get_config():
-            """returns the security config"""
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-            _logger.debug("Successful! Sending all security config to client.")
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.config})
-
         # Request 'system armed' status from config
         @app.route('/system/config/system_armed', methods=['POST'])
         def get_system_armed():
