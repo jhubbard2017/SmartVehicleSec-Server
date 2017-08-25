@@ -29,6 +29,7 @@ class PanicResponse(object):
     def __init__(self, file_name=None):
         self.contacts = {}
         self.local_file_name = file_name or PanicResponse._DEFAULT_FILE
+        self.total_emails_sent = 0
         self._load()
 
     def _load(self):
@@ -144,7 +145,7 @@ class PanicResponse(object):
 
     def send_message_all(self):
         """sends warning message (email) to all contacts"""
-        for contact in self.contacts:
+        for name, contact in self.contacts.iteritems():
             sent = self.construct_email_and_send(contact['email'])
             if not sent:
                 _logger.debug('Error. Email could not be sent to [{0}]'.format(contact['email']))
@@ -199,9 +200,11 @@ class PanicResponse(object):
             mail.starttls()
             mail.login(PanicResponse._SYSTEM_EMAIL, PanicResponse._SYSTEM_PASSWORD)
             mail.sendmail(email_addr, PanicResponse._SYSTEM_EMAIL, email.as_string())
+            self.total_emails_sent += 1
         except smtplib.SMTPException as e:
             _logger.debug('Could not send email. [{0}]'.format(e))
             mail.quit()
             return not success
 
+        mail.quit()
         return success
