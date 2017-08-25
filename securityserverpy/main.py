@@ -38,22 +38,15 @@ def _config_from_args():
 
     return parser.parse_args()
 
-def _config_logging():
-    """allow log level to be set by environment"""
-    if 'SECURITYSERVER_LOG' in os.environ.keys():
-        log_level = os.environ['SECURITYSERVER_LOG'].upper()
-        _logger.setLevel(log_level)
-        _logger.warn('set log level [{0}]'.format(log_level))
-
-def main_thread():
-    """main thread to start up the server"""
-    sec_server.start()
-
 # Make global so can be accessed when need to stop system, and safely save settings
 config = _config_from_args()
 http_port = int(config.http_port)
 sec_server = SecurityServer(host=config.host, http_port=http_port,
                             no_hardware=config.no_hardware, no_video=config.no_video)
+
+def main_thread():
+    """main thread to start up the server"""
+    sec_server.start()
 
 def main():
     """ main function
@@ -70,7 +63,6 @@ def main():
             _logger.info("Shutting down. Saving settings.")
             sec_server.save_settings()
             sys.exit(0)
-
 
 if __name__ == '__main__':
     main()
