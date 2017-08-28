@@ -5,3 +5,5 @@ PyYAML
 opencv-python
 imutils
 flask
+psycopg2
+configparser

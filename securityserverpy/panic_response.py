@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+#
+# utility class managing panic response contacts and sending out alert emails
+#
+
 import os
 import os.path
 import yaml
