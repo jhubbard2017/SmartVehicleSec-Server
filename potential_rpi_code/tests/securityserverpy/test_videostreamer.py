@@ -1,6 +1,7 @@
 import unittest
 
-from securityserverpy.videostreamer import VideoStreamer
+from potential_rpi_code.videostreamer import VideoStreamer
+
 
 class TestVideoStreamer(unittest.TestCase):
     """set of test for videostreamer.VideoStreamer"""

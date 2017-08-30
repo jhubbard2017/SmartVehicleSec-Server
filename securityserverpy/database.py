@@ -8,7 +8,7 @@ from configparser import ConfigParser
 
 from securityserver import _logger
 
-class Databases(object):
+class Database(object):
     """module to manage database connections and calls"""
 
     _CONFIG_PATH = 'database/database.ini'
@@ -16,6 +16,8 @@ class Databases(object):
     def __init__(self):
         self.cursor = None
         self.connection = None
+        self.tables = ['mdevices', 'rdevices', 'connections', 'securityconfig', 'contacts', 'logs']
+
         params = self._get_database_info(Databases._CONFIG_PATH)
         try:
             # Connect to database and establish cursor for communication
@@ -159,6 +161,15 @@ class Databases(object):
         values = (mac_address,)
         return self._commit_sql(sql, values)
 
+    def get_raspberry_pi_device(self, md_mac_address):
+        sql = 'SELECT rd_mac_address from rdevices WHERE md_mac_address = %s'
+        values = (md_mac_address,)
+        self._commit_sql(sql, values)
+        success, data = self._fetch_one_data()
+        if not success:
+            return None
+        return data[0]
+
     def add_raspberry_pi_connection(self, mac_address, ip_address, port):
         sql = 'INSERT INTO connections(mac_address, ip_address, port) VALUES(%s, %s, %s);'
         values = (mac_address, ip_address, port)
@@ -176,6 +187,17 @@ class Databases(object):
             all_success = all_success and self._commit_sql(sql, values)
 
         return all_success
+
+    def get_raspberry_pi_connection(self, rd_mac_address):
+        sql = 'SELECT ip_address, port FROM connections WHERE rd_mac_address = %s'
+        values = (rd_mac_address,)
+        self._commit_sql(sql, values)
+        success, data = self._fetch_one_data()
+        if not success or not data:
+            return None, None
+        ip_address = data[0]
+        port = data[1]
+        return ip_address, port
 
     def remove_raspberry_pi_connection(self, mac_address):
         sql = 'DELETE FROM connections WHERE mac_address = %s'
@@ -200,34 +222,28 @@ class Databases(object):
 
         return all_success
 
-    def remove_contact(self, name):
-        database = 'contacts'
-        sql = 'DELETE FROM contacts WHERE name = %s'
-        values = (name,)
-        return self._commit_sql(sql, values)
+    def get_contacts(self, rd_mac_address):
+        sql = 'SELECT name, email FROM contacts WHERE rd_mac_address = %s'
+        values = (rd_mac_address,)
+        self._commit_sql(sql, values)
+        success, data = self._fetch_all_data()
+        if not success:
+            return None
+        return [{'name': contact[0], 'email': contact[1]} for contact in data]
 
     def add_log(self, rd_mac_address, info, date, time, type):
         sql = 'INSERT INTO logs(mac_address, info, date, time, type) VALUES(%s, %s, %s, %s, %s);'
         values = (rd_mac_address, info, date, time, type)
         return self._commit_sql(sql, values)
 
-    def get_all_logs(self, rd_mac_address):
-        sql = 'SELECT * FROM logs WHERE mac_address = %s'
-        values = (rd_mac_address,)
+    def get_logs(self, rd_mac_address, type):
+        sql = 'SELECT info, date, time FROM logs WHERE mac_address = %s AND type = %s'
+        values = (rd_mac_address, type)
         self._commit_sql(sql, values)
         success, data = self._fetch_all_data()
         if not success:
             return None
-        return data
-
-    def get_logs(self, rd_mac_address, count):
-        sql = 'SELECT * FROM logs WHERE mac_address = %s'
-        values = (rd_mac_address,)
-        self._commit_sql(sql, values)
-        success, data = self._fetch_many_data(count)
-        if not success:
-            return None
-        return data
+        return [{'info': log[0], 'date': log[1], 'time': log[2]} for log in data]
 
     def remove_log(self):
         pass
@@ -252,10 +268,16 @@ class Databases(object):
         pass
 
     def get_security_config(self, rd_mac_address):
-        sql = 'SELECT * FROM securityconfig WHERE mac_address = %s'
+        sql = 'SELECT system_armed, system_breached FROM securityconfig WHERE mac_address = %s'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
         success, data = self._fetch_one_data()
         if not success:
             return None
-        return data
+        return {'system_armed': data[0], 'system_breached': data[1]}
+
+    def clear_all_tables(self):
+        for table in self.tables:
+            sql = 'TRUNCATE TABLE {0}'.format(table)
+            values = ()
+            self._commit_sql(sql, values)
