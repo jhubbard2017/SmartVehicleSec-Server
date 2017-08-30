@@ -3,11 +3,9 @@
 # Test for securityserverpy.config.Config
 #
 
-import os
 import unittest
-import yaml
 
-from securityserverpy.config import Config
+from potential_rpi_code.config import Config
 
 
 class TestConfig(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from securityserverpy.logs import Logs
+from potential_rpi_code.logs import Logs
 
 
 class TestLogs(unittest.TestCase):

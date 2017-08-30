@@ -3,19 +3,14 @@
 # logic for establing server communication, processing data, and sending data to clients
 #
 
-from threading import Thread
 import time
 import datetime
 from flask import Flask, jsonify, request, abort
 import requests
 
 from securityserverpy import _logger
-from securityserverpy.devices import DeviceManager
-from securityserverpy.hwcontroller import HardwareController
-from securityserverpy.config import Config
-from securityserverpy.logs import Logs
-from securityserverpy.videostreamer import VideoStreamer
-
+from securityserverpy.database import Database
+from securityserverpy.panic_response import PanicResponse
 
 _SUCCESS_CODE = 201
 _FAILURE_CODE = 404
@@ -23,309 +18,440 @@ _FAILURE_CODE = 404
 app = Flask(__name__)
 
 class SecurityServer(object):
-    """handles server-client communication and processing of data sent and recieved
+    """Centralized server to communicate both with mobile app client and raspberry pi client
 
     SecurityServer module uses Flask to allow the server to operate as a REST API server
 
     Using this approach, we don't have to manager connections to clients and we can literally "rest"
     when the client doesn't need to send a command or retrieve data. Only when the client needs it do we actually
     do the work.
+
+    The two key components of this server are the FLASK REST API and the Postgres database.
     """
-
-    # Constants
-    _DEFAULT_CAMERA_ID = 0
-    _GEOIP_HOSTNAME = "http://freegeoip.net/json"
-
-    # status LED flash signals
-    _FLASH_NEW_DEVICE = 3
-    _FLASH_SYSTEM_ARMED = 10
-    _FLASH_SYSTEM_DISARMED = 5
-    _FLASH_DEVICE_CONNECTED = 4
-    _FLASH_SERVER_ON = 3
 
     # Log constants
     _USER_CONTROLLED_LOG_TYPE = 'user_controlled_type'
     _SECURITY_CONTROLLED_LOG_TYPE = 'security_controlled_type'
 
-    def __init__(self, host, http_port, no_hardware=False, no_video=False, testing=False):
-        """constructor method for SecurityServer
-
-        HardwareController: used to control all pieces of hardware connected to the raspberry pi
-        DeviceManager: module used to store device information that connects to the server
-        SecurityConfig: a collection of security attributes about the system (system armed, cameras live, etc.)
-        VideoStreamer: module to control video streaming to clients from server, and motion detection
-
-        We use the 2 config values (no_hardware and no_video) for different development modes
-        """
+    def __init__(self, host, port, testing=False):
+        """constructor method for SecurityServer"""
         self.host = host
-        self.http_port = http_port
-        self.device_manager = DeviceManager()
-        self.security_config = Config()
-        self.logs = Logs()
+        self.port = port
+        self.testing = testing
 
-        self.no_hardware = no_hardware
-        self.no_video = no_video
-
-        # Set up different configs if needed
-        if not self.no_hardware:
-            self.hwcontroller = HardwareController()
-        if not self.no_video:
-            self.videostream = VideoStreamer(SecurityServer._DEFAULT_CAMERA_ID, self.no_video)
-        if testing:
-            self.device_manager = DeviceManager(file_name='tests/data/testdevices.yaml')
-            self.security_config = Config(config_file_name='tests/data/testconfig.yaml')
-            self.logs = Logs(file_name='tests/data/testlogs.yaml')
+        # Initialize the database
+        self.database = Database()
+        self.panic_response = PanicResponse()
 
         # To make the REST API (Flask) methods work, we use inner methods
-        # Also, all api request from the user requires a device name, which is hashed in the system.
-        # In order to recieve a successful request code and expected data, the device name hash must exist in our system
+        # Also, all api request from the user requires some type of data, which is shown in each method.
+        # In order to recieve a successful request code and expected data, the device MAC address must exist in the database
 
         # Error handling
         @app.errorhandler(_FAILURE_CODE)
         def not_found(error):
             return jsonify({'code': _FAILURE_CODE,'data': 0})
 
-        # Request 'system armed' status from config
-        @app.route('/system/config/system_armed', methods=['POST'])
-        def get_system_armed():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
+        @app.route('/system/security_config', methods=['POST'])
+        def get_security_config():
+            """API route to get system_armed security config value
 
-            _logger.debug("Successful! Sending security config (system_armed) to client.")
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_armed})
-
-        # Request 'cameras live' status from config
-        @app.route('/system/config/cameras_live', methods=['POST'])
-        def get_cameras_live():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-
-            _logger.debug("Successful! Sending security config (cameras_live) to client.")
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.cameras_live})
-
-        # Request 'system breached' status from config
-        @app.route('/system/config/system_breached', methods=['POST'])
-        def get_system_breached():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-
-            _logger.debug("Successful! Sending security config (system_breached) to client.")
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
-
-        # Request add new device to system
-        @app.route('/system/devices', methods=['POST'])
-        def add_new_device():
-            """adds new device
-
-            Todo: check if this actually works
+            required data:
+                md_mac_address: str
             """
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                success = self.device_manager.add_device(name)
-                if success:
-                    self.logs.add_log("Device added - {0}".format(name), SecurityServer._USER_CONTROLLED_LOG_TYPE)
-                    if not self.no_hardware:
-                        self.hwcontroller.status_led_flash(SecurityServer._FLASH_NEW_DEVICE)
-                else:
-                    _logger.debug("Error. Failure adding device.")
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from Database')
+                abort(_FAILURE_CODE)
+
+            security_config = self.database.get_security_config(rd_mac_address)
+            if not security_config:
+                _logger.debug('Failed to get security config for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Sending security config to client [{0}]".format(md_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': security_config})
+
+        @app.route('/system/add_contacts', methods=['POST'])
+        def add_contacts():
+            """API route to add trustworthy contacts for a raspberry pi system
+
+            required data:
+                md_mac_address: str
+                contacts: [{}]
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from Database')
+                abort(_FAILURE_CODE)
+
+            contacts = request.json['contacts']
+            for contact in contacts:
+                success = self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone'])
+                if not success:
+                    _logger.debug('Failed to add contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
                     abort(_FAILURE_CODE)
-            _logger.debug("Successful! Added new device to system.")
+
+            _logger.debug("Successful! Added contacts for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
-        # Request to arm/disarm system
+        @app.route('/system/update_contacts', methods=['POST'])
+        def update_contacts():
+            """API route to update trustworthy contacts for a raspberry pi system
+
+            required data:
+                md_mac_address: str
+                contacts: [{}]
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from Database')
+                abort(_FAILURE_CODE)
+
+            contacts = request.json['contacts']
+            for contact in contacts:
+                success = self.database.update_contact(rd_mac_address, contact['name'],
+                                                       email=contact['email'], phone=contact['phone'])
+                if not success:
+                    _logger.debug('Failed to update contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
+                    abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Updated contacts for [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/add_new_device', methods=['POST'])
+        def add_new_device():
+            """API route to add new mobile device and associated raspberry pi device to server
+
+            required data:
+                md_mac_address: str
+                name: str
+                rd_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            md_mac_address = request.json['md_mac_address']
+            name = request.json['name']
+            success = self.database.add_mobile_device(md_mac_address, name)
+            if not success:
+                _logger.debug('Failed to add mobile device [{0}]'.format(md_mac_address))
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            success = self.database.add_raspberry_pi_device(md_mac_address, rd_mac_address)
+            if not success:
+                _logger.debug('Failed to add raspberry pi device [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Added new devices [{0}] [{1}]".format(md_mac_address, rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
+        @app.route('/system/add_connection', methods=['POST'])
+        def add_connection():
+            """API route to add connection parameters for a raspberry pi device
+
+            required data:
+                rd_mac_address: str
+                ip_address: str
+                port: int
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            ip_address = request.json['ip_address']
+            port = request.json['port']
+            success = self.database.add_raspberry_pi_connection(rd_mac_address, ip_address, port)
+            if not success:
+                _logger.debug('Failed to add raspberry pi connection [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
+        @app.route('/system/update_connection', methods=['POST'])
+        def update_connection():
+            """API route to update connection parameters for a raspberry pi device
+
+            required data:
+                rd_mac_address: str
+                ip_address: str
+                port: int
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            ip_address = request.json['ip_address']
+            port = request.json['port']
+            success = self.database.update_raspberry_pi_connection(rd_mac_address, ip_address=ip_address, port=port)
+            if not success:
+                _logger.debug('Failed to update raspberry pi connection [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Updated raspberry pi connection [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
-            """Arms or disarms the system, depending on whether the request is true or false"""
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
+            """API route to arm a security system
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-            if request.json['data'] == True:
-                # Arm system
-                if not self.security_config.system_armed:
-                    self.security_config.system_armed = True
-                    self.logs.add_log("System armed", SecurityServer._USER_CONTROLLED_LOG_TYPE)
-                else:
-                    abort(_FAILURE_CODE)
 
-                if not self.no_hardware:
-                    # Flash led then leave it on
-                    self.hwcontroller.status_led_flash(SecurityServer._FLASH_SYSTEM_ARMED)
-                    self.hwcontroller.status_led_on()
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                abort(_FAILURE_CODE)
 
-                system_armed_thread = Thread(target=self._system_armed_thread)
-                system_armed_thread.start()
-            elif request.json['data'] == False:
-                # Disarm system
-                if self.security_config.system_armed:
-                    self.security_config.system_armed = False
-                    self.logs.add_log("System disarmed", SecurityServer._USER_CONTROLLED_LOG_TYPE)
-                else:
-                    _logger.debug("Error. System already armed.")
-                    abort(_FAILURE_CODE)
+            success = self.database.update_security_config(rd_mac_address, system_armed=True)
+            if not success:
+                _logger.debug('Failed to set update security config for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
-                if self.security_config.cameras_live:
-                    self.security_config.cameras_live = False
-                if not self.no_hardware:
-                    self.hwcontroller.status_led_flash(SecurityServer._FLASH_SYSTEM_DISARMED)
+            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not ip_address and not port:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                abort(_FAILURE_CODE)
 
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            # send command to raspberry pi
+            success = self._disarm_system(ip_address, port)
 
-        # Request to get list of system logs
+            _logger.debug("Successful! Armed system [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
+        @app.route('/system/disarm', methods=['POST'])
+        def disarm_system():
+            """API route to disarm a security system
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                abort(_FAILURE_CODE)
+
+            success = self.database.update_security_config(rd_mac_address, system_armed=False)
+            if not success:
+                _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not ip_address and not port:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                abort(_FAILURE_CODE)
+
+            # send command to raspberry pi
+            success = self._disarm_system(ip_address, port)
+
+            _logger.debug("Successful! Disarmed system [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
         @app.route('/system/logs', methods=['GET'])
         def get_logs():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
+            """API route to get logs for a security system
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-            all_logs = self.logs.get_logs()
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                abort(_FAILURE_CODE)
+
+            user_logs = self.database.get_logs(rd_mac_address, SecurityServer._USER_CONTROLLED_LOG_TYPE)
+            system_logs = self.database.get_logs(rd_mac_address, SecurityServer._SECURITY_CONTROLLED_LOG_TYPE)
+            if not user_logs and not system_logs:
+                _logger.debug('Failed to get logs for raspberry pi device [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            all_logs = {
+                'user_logs': user_logs,
+                'system_logs': system_logs
+            }
+
+            _logger.debug("Successful! Sending logs from [{0}] to [{1}]".format(rd_mac_address, md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': all_logs})
 
-        # Request to set breach as false alarm
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
-                abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
-            if self.security_config.system_breached:
-                self.security_config.system_breached = False
-            return jsonify({'code': _SUCCESS_CODE, 'data': self.security_config.system_breached})
+            """API route to set security config as false alarm
 
-        # Request to get current GPS location of system
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                abort(_FAILURE_CODE)
+
+            success = self.database.update_security_config(rd_mac_address, system_breached=False)
+            if not success:
+                _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not ip_address and not port:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                abort(_FAILURE_CODE)
+
+            # send request to raspberry pi
+            success = self._set_false_alarm_for_system(ip_address, port)
+
+            _logger.debug("Successful! Updated security config for system [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
         @app.route('/system/location', methods=["POST"])
         def get_location_coordinates():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
+            """API route to get gps location coordinates of a raspberry pi system
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
 
-            position = self._fetch_location_coordinates()
-            return jsonify({'code': _SUCCESS_CODE, 'data': position})
-
-        # Request to get current temperature
-        @app.route('/system/temperature', methods=["POST"])
-        def get_temperature():
-            if not request.json or not 'name' in request.json:
-                _logger.debug("Error! Name not found in request data.")
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
-            else:
-                name = request.json['name']
-                if not self.device_manager.device_exist(name):
-                    _logger.debug("Error. Device does not exist.")
-                    abort(_FAILURE_CODE)
 
-            ctemp, ftemp = self.hwcontroller.read_thermal_sensor()
-            data = {'ctemp': ctemp, 'ftemp': ftemp}
+            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not ip_address and not port:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                abort(_FAILURE_CODE)
+
+            # Send request to raspberry pi and get data
+            data = self._get_gps_location_from_system(ip_address, port)
+
+            _logger.debug("Successful! Send gps coordinates from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
-    def _system_armed_thread(self):
-        """starts once the system has been armed
+        @app.route('/system/temperature', methods=["POST"])
+        def get_temperature():
+            """API route to get gps location coordinates of a raspberry pi system
 
-        Before starting this thread, we can safely assume that the `system_armed` config attribute has been set to
-        True. That means, in this method, we can loop until that value has been set to false. It will only be set to
-        false if a client sends data to the server to do so (Hence, disarming the system).
+            required data:
+                md_mac_address: str
+            """
+            if not request.json or not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
 
-        In this process, the things we want to do are:
-            • Read from the camera, getting the status and motion detected values from it.
-            • If we have successfully read from the camera and motion has been detected, someone has either broken
-                into the car, or its a false alarm (Kids are playing on the back seat) :)
-            • To be on the safe side, we assume its a break in, and fire up the `system_breached_thread`
-            • If motion hasnt been detected, we just continue to check until the system is disarmed
-        """
-        _logger.debug('System armed in 5 secs.')
-        time.sleep(5)
-        while self.security_config.system_armed:
-            if not self.no_hardware and not self.no_video:
-                motion_detected = self.hwcontroller.read_motion_sensor()
-                noise_detected = self.hwcontroller.read_noise_sensor()
-                if motion_detected or noise_detected:
-                    self.security_config.system_breached = True
-                    self.hwcontroller.status_led_flash_start()
-                    system_breach_thread = Thread(target=self._system_breached_thread)
-                    system_breach_thread.start()
-            time.sleep(0.2)
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                abort(_FAILURE_CODE)
 
-    def _system_breached_thread(self):
-        """starts once the system has been breached
+            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not ip_address and not port:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                abort(_FAILURE_CODE)
 
-        This method is fired as a separate thread once the system is armed and motion or loud sound has been detected.
+            # Send request to raspberry pi and get data
+            data = self._get_temperature_data_from_system(ip_address, port)
 
-        In this process, we want to:
-            • Initialize video writer object to record video to, and save the files on the server.
-                - Video files are saved with the following format: system-breach-stream1-{:%Y-%m-%d %-I:%M %p}.avi
-                - Using this format, we can easily operate on filenames to access files from particular dates and
-                    times as we please.
-            • While the `system_breached` security setting is set to True, update the video files with more frames.
-            • While this is happeneing, the `security_thread` will still be up, and the client can easily look at
-                the live stream while we are recording video.
-            • The thread will stop once we either recieve false alarm data from the client, or they reach out to dispatchers
-                and the situation is resolved.
-        """
-        _logger.debug('System breached.')
-        self.logs.add_log("System breached", SecurityServer._SECURITY_CONTROLLED_LOG_TYPE)
-        # video recorder
-        fourcc = cv2.cv.CV_FOURCC(*'XVID')  # cv2.VideoWriter_fourcc() does not exist
-        video_writer = cv2.VideoWriter("system-breach-recording-{:%b %d, %Y %-I:%M %p}.avi".format(datetime.datetime().now()),
-                                       fourcc, 20, (680, 480))
-        while self.security_config.system_breached:
-            if not self.no_hardware:
-                status, frame_jpeg, frame = self.videostream.read()
-                if status:
-                    video_writer.write(frame)
+            _logger.debug("Successful! Sending temperature information from [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+
+        #-------- API calls specifically from raspberry pi (security system) -----------
+
+        @app.route('system/set_breached', method=['POST'])
+        def set_system_breached():
+            """API route to set system breached for particular system (SHOULD ONLY BE CALLED BY RPI)
+
+            required data:
+                rd_mac_address: str
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            success = self.database.update_security_config(rd_mac_address, system_breached=True)
+            if not success:
+                _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            # Todo: figure out way of notifying associated mobile app client
+
+            _logger.debug("Successful! Updated security config for [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+
+        @app.route('system/panic', method=['POST'])
+        def panic_reponse():
+            """API route to send panic response emails and text messages to contacts of specific system
+
+            required data:
+                rd_mac_address: str
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            contacts = self.database.get_contacts(rd_mac_address)
+            if not contacts:
+                _logger.debug("Failed to get contacts for [{0}]".format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            for contact in contacts:
+                if not self.panic_response.send_message(contacts['email']):
+                    _logger.debug("Failed to send email to[{0}]".format(contacts['email']))
+                    abort(_FAILURE_CODE)
+
+            # Todo: figure out way of notifying associated mobile app client
+
+            _logger.debug("Successful! Sent panic email to contacts from [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': success})
 
     def save_settings(self):
-        """method is fired when the user disconnects or the socket connection is broken"""
+        """method is fired when the server is shut down"""
         _logger.debug('Saving security session.')
-
-        # Clear device list and reset security config for testing
-        # Todo: change during production
-        self.security_config.reset_config()
-        self.device_manager.clear()
-        self.logs.clear()
-
-        self.security_config.store_config()
-        self.device_manager.store_devices()
-        self.logs.store_logs()
-        if not self.no_hardware:
-            self.videostream.release_stream()
+        if self.testing:
+            self.database.clear_all_tables()
 
     def start(self):
         """starts the flask app"""
@@ -334,16 +460,85 @@ class SecurityServer(object):
     def server_app(self):
         return app
 
-    def _fetch_location_coordinates(self):
-        """fetches the location coordinates of the system, using the freegeoip/ host
+    def _get_temperature_data_from_system(self, ip_address, port):
+        """Sends http request to ip address and port to get current temperature data
+
+        args:
+            ip_address: str
+            port: int
 
         returns:
-            dict -> {'latitude': float, 'longitude': float}
+            dict
         """
-        geo = requests.get(self._GEOIP_HOSTNAME)
-        json_data = geo.json()
+        url = 'http://{0}:{1}/system/temperature'.format(ip_address, port)
+        temp = requests.get(url)
+        temp = temp.json()
+        data = {
+            "celsius": temp['celsius'],
+            "fahrenheit": float(location["fahrenheit"])
+        }
+        return data
+
+    def _get_gps_location_from_system(self, ip_address, port):
+        """Sends http request to ip address and port to get current gps data
+
+        args:
+            ip_address: str
+            port: int
+
+        returns:
+            dict
+        """
+        url = 'http://{0}:{1}/system/location'.format(ip_address, port)
+        location = requests.get(url)
+        location = location.json()
         position = {
-            "latitude": float(json_data["latitude"]),
-            "longitude": float(json_data["longitude"])
+            "latitude": float(location["latitude"]),
+            "longitude": float(location["longitude"])
         }
         return position
+
+    def _set_false_alarm_for_system(self, ip_address, port):
+        """Sends http request to ip address and port for false alarm
+
+        args:
+            ip_address: str
+            port: int
+
+        returns:
+            dict
+        """
+        url = 'http://{0}:{1}/system/false_alarm'.format(ip_address, port)
+        response = requests.get(url)
+        response = success.json()
+        return response['success']
+
+    def _arm_system(self, ip_address, port):
+        """Sends http request to ip address and port to arm system
+
+        args:
+            ip_address: str
+            port: int
+
+        returns:
+            dict
+        """
+        url = 'http://{0}:{1}/system/arm'.format(ip_address, port)
+        response = requests.get(url)
+        response = success.json()
+        return response['success']
+
+    def _disarm_system(self, ip_address, port):
+        """Sends http request to ip address and port to disarm system
+
+        args:
+            ip_address: str
+            port: int
+
+        returns:
+            dict
+        """
+        url = 'http://{0}:{1}/system/disarm'.format(ip_address, port)
+        response = requests.get(url)
+        response = success.json()
+        return response['success']
