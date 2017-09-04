@@ -2,56 +2,108 @@
 Python server software for the Smart Vehicle Security System.
 
 ## Usage Examples
-### running on local machine and raspberry pi
+### Running on local machine
 - this example assumes a python virtual env has already been established - see details on virtual env
-- this example does not trigger any calls to hardware devices
 ```shell
 (venv-securityserverpy) $ securityserverpy -i ip_address -p port 
 ```
 - the required arguments are the ip address and port number. These two need to be specified to start the program.
-- Optional arguments include `-nh` (no hardware configuration) `-nv` (no video configuration). Only use the hardware configuration of running on the raspberry pi.
+- When in development mode, use the `-d` argument so the database tables can be cleared after stopping the server.
 
-# YAML Configurations
-
-## Security Config File
-`securityserverpy` uses a yaml security config file:
+### Tips for development mode
+- When running and making api calls, use the `curl` command to send http request, as an example below.
+Each api route uses a post method so that json data can be accessed via server.
 ```shell
-yamls/serverconfig.yaml
+$ curl -H "Content-Type: application/json" -X POST -d '{"key": "value", }' http://{ip_address}:{port}/path/to/route
+```
+- Make sure if testing with security client, server is booted up first so that the client can initialize its system by updating the server with the current connection parameters.
+
+# Postgres Database
+The server uses a postgreSQL 9.6 database.
+
+## Setup and startup
+- Use the following command to install postgres using brew (make sure brew is installed and updated to latest version):
+```shell
+$ brew install postgresql
+```
+- To start up the postgres server (You have to do this before running the security server):
+```shell
+$ postgres -D /usr/local/var/postgres
+```
+- To create the database and setup as user, run the following commands:
+```shell
+$ psql -d postgres -h localhost
+$ CREATE DATABASE "smartVSecDatabase";
+$ CREATE ROLE "smartVSecUser" LOGIN PASSWORD 'smartVSecDatabase';
+$ CREATE SCHEMA secmonkey
+$ GRANT Usage, Create ON SCHEMA "smartVSecDatabase" TO "smartVSecUser";
+```
+- Exit the postgres CLI tool:
+```shell
+$ CTRL-D
+```
+- Now, access the database to make sure it was successfully created:
+```shell
+$ psql -d smartVSecDatabase -h localhost
+```
+- Once you have successfully set up the database, you can use the `create_tables.py` file to set up the tables in the database.
+This assumes you are in the virtual environment `venv-securityserverpy`. See details above.
+```shell
+(venv-securityserverpy) $ python database/create_tables.py
 ```
 
-### Config Values
-- `system_armed` security system is armed
-- `system_breached` security system has been breached
-- `cameras_live` cameras are currently live and/or recording
+# REST API
+The server uses a REST API for system access via a client mobile app or raspberry pi client. Below are the API calls available and the required data for success responses.
+Each path includes a leading string of `http://{address}:{port}/path/to/route`
 
-## Devices File
-`securityserverpy` uses a yaml devices file. to create a device file:
-```shell
-yamls/devices.yaml
-```
+### Mobile app API calls:
+- `/system/arm` : arm the associated vehicle security system
 
-### Devices Values
-For flexibility purposes, users may be able to connect more than one device/client to our security server.
-- `devices` list of connected and allowed devices
+  - Required data: { md_mac_address : str }
+- `/system/disarm` : disarm the associated vehicle security system
 
-## Logs File
-- user controlled and security controlled alerts/logs are store in a logs config file:
-```shell
-yamls/logs.yaml
-```
+  - Required data: { md_mac_address : str }
+- `/system/security_config` : get the current security config of the system
 
-### Logs Values
-- `user_controlled_type` logs initiated/created by the client
-- `security_controlled_type` logs initiated/create by the security system
+  - Required data: { md_mac_address : str }
+- `/system/add_contacts` : add security contacts for a specific mobile client
 
-## Contacts File
-`securityserverpy` uses a yaml contacts file for storing the trustworthy contacts of the client:
-```shell
-yamls/contacts.yaml
-```
+  - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+- `/system/update_contacts` : update security contacts for a specific mobile client
 
-### Contacts Values
-- `contacts` list of dict objects representing a contact (name, phone, email)
+  - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+- `/system/add_new_device` : setup new mobile app client on the server
+
+  - Required data: { md_mac_address : str, name : str, rd_mac_address : str }
+- `/system/logs` : get list of logs for a specific client
+
+  - Required data: { md_mac_address : str }
+- `/system/false_alarm` : set a security breach as a false alarm
+
+  - Required data: { md_mac_address : str }
+- `/system/location` : get gps location of a specific vehicle client
+
+  - Required data: { md_mac_address : str }
+- `/system/temperature` : get temperature data of a specific vehicle client
+
+  - Required data: { md_mac_address : str }
+
+### Security client API calls:
+- `/system/add_connection` : add a new security client connection to the server
+  
+  - Required data: { rd_mac_address : str, ip_address: str, port: int }
+- `/system/update_connection` : update existing security client connection on the server
+
+  - Required data: { rd_mac_address : str, ip_address : str, port : int }
+- `/system/get_connection` : get an existing security client from the server
+
+  - Required data: { rd_mac_address : str }
+- `/system/set_breached` : set specific system as security breach
+
+  - Required data: { rd_mac_address : str }
+- `/system/panic` : set panic response for specific security system
+
+  - Required data: { rd_mac_address : str }
 
 # Python Details
 ## first time python setup
