@@ -144,8 +144,6 @@ class SecurityServer(object):
             Things for this method to do:
                 add mobile device to database
                 add associated rpi device to database
-                create new security config (first time)
-
 
             required data:
                 md_mac_address: str
@@ -167,11 +165,6 @@ class SecurityServer(object):
             rd_mac_address = request.json['rd_mac_address']
             if not self.database.add_raspberry_pi_device(md_mac_address, rd_mac_address):
                 _logger.debug('Failed to add raspberry pi device [{0}]'.format(rd_mac_address))
-                abort(_FAILURE_CODE)
-
-            # Add new security config for raspberry pi device to database
-            if not self.database.add_security_config(rd_mac_address):
-                _logger.debug('Failed to add security config for raspberry pi device [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
             if not self.database.add_log(rd_mac_address, 'Added new device: [{0}]'.format(name)):
@@ -391,6 +384,24 @@ class SecurityServer(object):
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
         #-------- API calls specifically from raspberry pi (security system) -----------
+
+        @app.route('system/create_securityconfig', methods=['POST'])
+        def create_securityconfig():
+            """API route to create new security config for raspberry pi device
+
+            required data:
+                rd_mac_address: str
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            if not self.database.add_security_config(rd_mac_address):
+                _logger.debug('Failed to add security config for raspberry pi device [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/add_connection', methods=['POST'])
         def add_connection():
