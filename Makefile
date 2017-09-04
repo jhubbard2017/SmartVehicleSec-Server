@@ -15,6 +15,9 @@ develop:
 prod:
 	tox -evenv
 
+make postgres:
+	postgres -D /usr/local/var/postgres
+
 clean:
 	rm -rf build/ dist/ securityserverpy.egg-info/ .tox/ venv*/
 	find . -name '*.pyc' -delete

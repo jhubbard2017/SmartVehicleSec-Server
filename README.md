@@ -28,7 +28,7 @@ $ brew install postgresql
 ```
 - To start up the postgres server (You have to do this before running the security server):
 ```shell
-$ postgres -D /usr/local/var/postgres
+$ make postgres
 ```
 - To create the database and setup as user, run the following commands:
 ```shell

@@ -179,11 +179,11 @@ class Database(object):
     def update_raspberry_pi_connection(self, rd_mac_address, ip_address=None, port=None):
         all_success = True
         if ip_address:
-            sql = 'UPDATE connections SET ip_address = %s WHERE rd_mac_adress = %s;'
+            sql = 'UPDATE connections SET ip_address = %s WHERE rd_mac_address = %s;'
             values = (ip_address, rd_mac_address)
             all_success = all_success and self._commit_sql(sql, values)
         if port:
-            sql = 'UPDATE connections SET port = %s WHERE rd_mac_adress = %s;'
+            sql = 'UPDATE connections SET port = %s WHERE rd_mac_address = %s;'
             values = (port, rd_mac_address)
             all_success = all_success and self._commit_sql(sql, values)
 
@@ -280,7 +280,7 @@ class Database(object):
 
     def clear_all_tables(self):
         for table in self.tables:
-            sql = 'TRUNCATE TABLE {0}'.format(table)
+            sql = 'TRUNCATE TABLE {0};'.format(table)
             success = self._commit_sql(sql, ())
             if success:
                 _logger.debug('Successfully cleared table [{0}]'.format(table))

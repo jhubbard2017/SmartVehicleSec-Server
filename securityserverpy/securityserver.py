@@ -387,7 +387,7 @@ class SecurityServer(object):
 
         #-------- API calls specifically from raspberry pi (security system) -----------
 
-        @app.route('system/create_securityconfig', methods=['POST'])
+        @app.route('/system/create_securityconfig', methods=['POST'])
         def create_securityconfig():
             """API route to create new security config for raspberry pi device
 
@@ -398,11 +398,12 @@ class SecurityServer(object):
                 _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
 
+            rd_mac_address = request.json['rd_mac_address']
             if not self.database.add_security_config(rd_mac_address):
                 _logger.debug('Failed to add security config for raspberry pi device [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
-            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
+            _logger.debug("Successful! Create security config for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/add_connection', methods=['POST'])
