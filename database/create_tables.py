@@ -38,25 +38,25 @@ def create_tables():
     commands = (
         """
         CREATE TABLE mdevices (
-            md_mac_address VARCHAR(255),
+            md_mac_address VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL
         )
         """,
         """ CREATE TABLE rdevices (
-                md_mac_address VARCHAR(255),
+                md_mac_address VARCHAR(255) PRIMARY KEY,
                 rd_mac_address VARCHAR(255) NOT NULL
                 )
         """,
         """
         CREATE TABLE connections (
-                rd_mac_address VARCHAR(255),
+                rd_mac_address VARCHAR(255) PRIMARY KEY,
                 ip_address VARCHAR(255) NOT NULL,
                 port INT NOT NULL
         )
         """,
         """
         CREATE TABLE securityconfig (
-                rd_mac_address VARCHAR(255),
+                rd_mac_address VARCHAR(255) PRIMARY KEY,
                 system_armed BOOLEAN NOT NULL,
                 system_breached BOOLEAN NOT NULL
         )
@@ -65,9 +65,8 @@ def create_tables():
         CREATE TABLE logs (
                 rd_mac_address VARCHAR(255),
                 info VARCHAR(255) NOT NULL,
-                date DATE NOT NULL,
-                time TIME NOT NULL,
-                type VARCHAR(255) NOT NULL
+                date VARCHAR(255) NOT NULL,
+                time VARCHAR(255) NOT NULL
         )
         """,
         """

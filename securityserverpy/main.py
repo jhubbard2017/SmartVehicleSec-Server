@@ -25,24 +25,20 @@ def _config_from_args():
     optional_argument_group = parser.add_argument_group('optional arguments')
     optional_argument_group.add_argument(
         '-i', '--host', dest='host', default=None, required=True,
+        help='ip address used for clients to access server. ')
+    optional_argument_group.add_argument(
+        '-p', '--port', dest='port', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
-        '-p', '--httpport', dest='http_port', default=None, required=True,
-        help='Port number used for clients to access server. ')
-    optional_argument_group.add_argument(
-        '-nh', '--no_hardware', dest='no_hardware', action='store_true', default=False, required=False,
-        help='Will not attempt to use any hardware.')
-    optional_argument_group.add_argument(
-        '-nv', '--no_video', dest='no_video', action='store_true', default=False, required=False,
-        help='Will not attempt to use any hardware.')
+        '-d', '--dev', dest='dev', action='store_true', default=False, required=False,
+        help='Will clear databases after closing server session.')
 
     return parser.parse_args()
 
 # Make global so can be accessed when need to stop system, and safely save settings
 config = _config_from_args()
-http_port = int(config.http_port)
-sec_server = SecurityServer(host=config.host, http_port=http_port,
-                            no_hardware=config.no_hardware, no_video=config.no_video)
+port = int(config.port)
+sec_server = SecurityServer(host=config.host, port=port, dev=config.dev)
 
 def main_thread():
     """main thread to start up the server"""

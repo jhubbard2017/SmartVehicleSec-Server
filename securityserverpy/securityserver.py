@@ -29,15 +29,12 @@ class SecurityServer(object):
     The two key components of this server are the FLASK REST API and the Postgres database.
     """
 
-    # Log constants
-    _USER_CONTROLLED_LOG_TYPE = 'user_controlled_type'
-    _SECURITY_CONTROLLED_LOG_TYPE = 'security_controlled_type'
-
-    def __init__(self, host, port, testing=False):
+    def __init__(self, host, port, testing=False, dev=False):
         """constructor method for SecurityServer"""
         self.host = host
         self.port = port
         self.testing = testing
+        self.dev = dev
 
         # Initialize the database
         self.database = Database()
@@ -97,10 +94,13 @@ class SecurityServer(object):
 
             contacts = request.json['contacts']
             for contact in contacts:
-                success = self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone'])
-                if not success:
+                if not self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone']):
                     _logger.debug('Failed to add contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
                     abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'Added security contacts.'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Added contacts for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
@@ -125,11 +125,14 @@ class SecurityServer(object):
 
             contacts = request.json['contacts']
             for contact in contacts:
-                success = self.database.update_contact(rd_mac_address, contact['name'],
-                                                       email=contact['email'], phone=contact['phone'])
-                if not success:
+                if not self.database.update_contact(rd_mac_address, contact['name'],
+                                                    email=contact['email'], phone=contact['phone']):
                     _logger.debug('Failed to update contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
                     abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'Updated security contacts.'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Updated contacts for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
@@ -137,6 +140,12 @@ class SecurityServer(object):
         @app.route('/system/add_new_device', methods=['POST'])
         def add_new_device():
             """API route to add new mobile device and associated raspberry pi device to server
+
+            Things for this method to do:
+                add mobile device to database
+                add associated rpi device to database
+                create new security config (first time)
+
 
             required data:
                 md_mac_address: str
@@ -147,69 +156,30 @@ class SecurityServer(object):
                 _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
 
+            # Add mobile device to database
             md_mac_address = request.json['md_mac_address']
             name = request.json['name']
-            success = self.database.add_mobile_device(md_mac_address, name)
-            if not success:
+            if not self.database.add_mobile_device(md_mac_address, name):
                 _logger.debug('Failed to add mobile device [{0}]'.format(md_mac_address))
                 abort(_FAILURE_CODE)
 
+            # Add raspberry pi for mobile device to database
             rd_mac_address = request.json['rd_mac_address']
-            success = self.database.add_raspberry_pi_device(md_mac_address, rd_mac_address)
-            if not success:
+            if not self.database.add_raspberry_pi_device(md_mac_address, rd_mac_address):
                 _logger.debug('Failed to add raspberry pi device [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
+            # Add new security config for raspberry pi device to database
+            if not self.database.add_security_config(rd_mac_address):
+                _logger.debug('Failed to add security config for raspberry pi device [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'Added new device: [{0}]'.format(name)):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
             _logger.debug("Successful! Added new devices [{0}] [{1}]".format(md_mac_address, rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
-
-        @app.route('/system/add_connection', methods=['POST'])
-        def add_connection():
-            """API route to add connection parameters for a raspberry pi device
-
-            required data:
-                rd_mac_address: str
-                ip_address: str
-                port: int
-            """
-            if not request.json or not 'rd_mac_address' in request.json:
-                _logger.debug("Error! Device not found in request data.")
-                abort(_FAILURE_CODE)
-
-            rd_mac_address = request.json['rd_mac_address']
-            ip_address = request.json['ip_address']
-            port = request.json['port']
-            success = self.database.add_raspberry_pi_connection(rd_mac_address, ip_address, port)
-            if not success:
-                _logger.debug('Failed to add raspberry pi connection [{0}]'.format(rd_mac_address))
-                abort(_FAILURE_CODE)
-
-            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
-
-        @app.route('/system/update_connection', methods=['POST'])
-        def update_connection():
-            """API route to update connection parameters for a raspberry pi device
-
-            required data:
-                rd_mac_address: str
-                ip_address: str
-                port: int
-            """
-            if not request.json or not 'rd_mac_address' in request.json:
-                _logger.debug("Error! Device not found in request data.")
-                abort(_FAILURE_CODE)
-
-            rd_mac_address = request.json['rd_mac_address']
-            ip_address = request.json['ip_address']
-            port = request.json['port']
-            success = self.database.update_raspberry_pi_connection(rd_mac_address, ip_address=ip_address, port=port)
-            if not success:
-                _logger.debug('Failed to update raspberry pi connection [{0}]'.format(rd_mac_address))
-                abort(_FAILURE_CODE)
-
-            _logger.debug("Successful! Updated raspberry pi connection [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
@@ -228,21 +198,28 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            success = self.database.update_security_config(rd_mac_address, system_armed=True)
-            if not success:
+            if not self.database.update_security_config(rd_mac_address, system_armed=True):
                 _logger.debug('Failed to set update security config for [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
-            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not ip_address and not port:
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
                 _logger.debug('Failed to get raspberry pi connection from database')
                 abort(_FAILURE_CODE)
 
             # send command to raspberry pi
-            success = self._disarm_system(ip_address, port)
+            url = 'http://{0}:{1}/system/arm'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'System armed'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Armed system [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
         @app.route('/system/disarm', methods=['POST'])
         def disarm_system():
@@ -261,22 +238,30 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            success = self.database.update_security_config(rd_mac_address, system_armed=False)
-            if not success:
+            if not self.database.update_security_config(rd_mac_address, system_armed=False):
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
-            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not ip_address and not port:
+
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
                 _logger.debug('Failed to get raspberry pi connection from database')
                 abort(_FAILURE_CODE)
 
             # send command to raspberry pi
-            success = self._disarm_system(ip_address, port)
+            url = 'http://{0}:{1}/system/disarm'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'System disarmed'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Disarmed system [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
-        @app.route('/system/logs', methods=['GET'])
+        @app.route('/system/logs', methods=['POST'])
         def get_logs():
             """API route to get logs for a security system
 
@@ -293,19 +278,13 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            user_logs = self.database.get_logs(rd_mac_address, SecurityServer._USER_CONTROLLED_LOG_TYPE)
-            system_logs = self.database.get_logs(rd_mac_address, SecurityServer._SECURITY_CONTROLLED_LOG_TYPE)
-            if not user_logs and not system_logs:
+            logs = self.database.get_logs(rd_mac_address)
+            if not logs:
                 _logger.debug('Failed to get logs for raspberry pi device [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
-            all_logs = {
-                'user_logs': user_logs,
-                'system_logs': system_logs
-            }
-
             _logger.debug("Successful! Sending logs from [{0}] to [{1}]".format(rd_mac_address, md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': all_logs})
+            return jsonify({'code': _SUCCESS_CODE, 'data': logs})
 
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
@@ -324,18 +303,25 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            success = self.database.update_security_config(rd_mac_address, system_breached=False)
-            if not success:
+            if not self.database.update_security_config(rd_mac_address, system_breached=False):
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
                 abort(_FAILURE_CODE)
 
-            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not ip_address and not port:
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
                 _logger.debug('Failed to get raspberry pi connection from database')
                 abort(_FAILURE_CODE)
 
             # send request to raspberry pi
-            success = self._set_false_alarm_for_system(ip_address, port)
+            url = 'http://{0}:{1}/system/false_alarm'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                abort(_FAILURE_CODE)
+
+            if not self.database.add_log(rd_mac_address, 'Security breach false alarm'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Updated security config for system [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': success})
@@ -357,13 +343,17 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not ip_address and not port:
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
                 _logger.debug('Failed to get raspberry pi connection from database')
                 abort(_FAILURE_CODE)
 
             # Send request to raspberry pi and get data
-            data = self._get_gps_location_from_system(ip_address, port)
+            url = 'http://{0}:{1}/system/location'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Send gps coordinates from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
@@ -385,20 +375,91 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from database')
                 abort(_FAILURE_CODE)
 
-            ip_address, port = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not ip_address and not port:
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
                 _logger.debug('Failed to get raspberry pi connection from database')
                 abort(_FAILURE_CODE)
 
             # Send request to raspberry pi and get data
-            data = self._get_temperature_data_from_system(ip_address, port)
+            url = 'http://{0}:{1}/system/temperature'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                abort(_FAILURE_CODE)
 
             _logger.debug("Successful! Sending temperature information from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
         #-------- API calls specifically from raspberry pi (security system) -----------
 
-        @app.route('system/set_breached', method=['POST'])
+        @app.route('/system/add_connection', methods=['POST'])
+        def add_connection():
+            """API route to add connection parameters for a raspberry pi device
+
+            required data:
+                rd_mac_address: str
+                ip_address: str
+                port: int
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            ip_address = request.json['ip_address']
+            port = request.json['port']
+            if not self.database.add_raspberry_pi_connection(rd_mac_address, ip_address, port):
+                _logger.debug('Failed to add raspberry pi connection [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/update_connection', methods=['POST'])
+        def update_connection():
+            """API route to update connection parameters for a raspberry pi device
+
+            required data:
+                rd_mac_address: str
+                ip_address: str
+                port: int
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            ip_address = request.json['ip_address']
+            port = request.json['port']
+            if not self.database.update_raspberry_pi_connection(rd_mac_address, ip_address=ip_address, port=port):
+                _logger.debug('Failed to update raspberry pi connection [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            _logger.debug("Successful! Updated raspberry pi connection [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/get_connection', methods=['POST'])
+        def get_connection():
+            """API route to check if connection exists in database
+
+            required data:
+                rd_mac_address: str
+            """
+            if not request.json or not 'rd_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                abort(_FAILURE_CODE)
+
+            rd_mac_address = request.json['rd_mac_address']
+            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not success:
+                _logger.debug('Failed to get raspberry pi connection [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
+            if not connection:
+                jsonify({'code': _SUCCESS_CODE, 'data': False})
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/set_breached', methods=['POST'])
         def set_system_breached():
             """API route to set system breached for particular system (SHOULD ONLY BE CALLED BY RPI)
 
@@ -417,10 +478,14 @@ class SecurityServer(object):
 
             # Todo: figure out way of notifying associated mobile app client
 
+            if not self.database.add_log(rd_mac_address, 'System breached'):
+                _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
             _logger.debug("Successful! Updated security config for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': success})
 
-        @app.route('system/panic', method=['POST'])
+        @app.route('/system/panic', methods=['POST'])
         def panic_reponse():
             """API route to send panic response emails and text messages to contacts of specific system
 
@@ -444,101 +509,39 @@ class SecurityServer(object):
 
             # Todo: figure out way of notifying associated mobile app client
 
+            if not self.database.add_log(rd_mac_address, 'Panic response initiated'):
+                _logger.debug('Failed to add log for [{1}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
             _logger.debug("Successful! Sent panic email to contacts from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': success})
 
     def save_settings(self):
         """method is fired when the server is shut down"""
         _logger.debug('Saving security session.')
-        if self.testing:
+        if self.dev:
             self.database.clear_all_tables()
 
     def start(self):
         """starts the flask app"""
-        app.run(host=self.host, port=self.http_port)
+        app.run(host=self.host, port=self.port)
 
     def server_app(self):
         return app
 
-    def _get_temperature_data_from_system(self, ip_address, port):
-        """Sends http request to ip address and port to get current temperature data
+    def send_request(self, rd_mac_address, url):
+        """Sends http request to ip address and port connection
 
         args:
-            ip_address: str
-            port: int
+            rd_mac_address: str
+            url: str
 
         returns:
-            dict
+            json {}
         """
-        url = 'http://{0}:{1}/system/temperature'.format(ip_address, port)
-        temp = requests.get(url)
-        temp = temp.json()
-        data = {
-            "celsius": temp['celsius'],
-            "fahrenheit": float(location["fahrenheit"])
-        }
-        return data
-
-    def _get_gps_location_from_system(self, ip_address, port):
-        """Sends http request to ip address and port to get current gps data
-
-        args:
-            ip_address: str
-            port: int
-
-        returns:
-            dict
-        """
-        url = 'http://{0}:{1}/system/location'.format(ip_address, port)
-        location = requests.get(url)
-        location = location.json()
-        position = {
-            "latitude": float(location["latitude"]),
-            "longitude": float(location["longitude"])
-        }
-        return position
-
-    def _set_false_alarm_for_system(self, ip_address, port):
-        """Sends http request to ip address and port for false alarm
-
-        args:
-            ip_address: str
-            port: int
-
-        returns:
-            dict
-        """
-        url = 'http://{0}:{1}/system/false_alarm'.format(ip_address, port)
-        response = requests.get(url)
-        response = success.json()
-        return response['success']
-
-    def _arm_system(self, ip_address, port):
-        """Sends http request to ip address and port to arm system
-
-        args:
-            ip_address: str
-            port: int
-
-        returns:
-            dict
-        """
-        url = 'http://{0}:{1}/system/arm'.format(ip_address, port)
-        response = requests.get(url)
-        response = success.json()
-        return response['success']
-
-    def _disarm_system(self, ip_address, port):
-        """Sends http request to ip address and port to disarm system
-
-        args:
-            ip_address: str
-            port: int
-
-        returns:
-            dict
-        """
-        url = 'http://{0}:{1}/system/disarm'.format(ip_address, port)
-        response = requests.get(url)
-        response = success.json()
-        return response['success']
+        data = {'rd_mac_address': rd_mac_address}
+        response = requests.post(url, json=data)
+        json = response.json()
+        if json['code'] != _SUCCESS_CODE:
+            return None
+        return json['data']
