@@ -56,12 +56,14 @@ class SecurityServer(object):
             required data:
                 md_mac_address: str
             """
-            if not request.json or not 'md_mac_address' in request.json:
+            if not request.json or not 'md_mac_address' in request.json or not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
                 abort(_FAILURE_CODE)
-
-            md_mac_address = request.json['md_mac_address']
-            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not request.json['md_mac_address'] and request.json['rd_mac_address']:
+                rd_mac_address = request.json['rd_mac_address']
+            else:
+                md_mac_address = request.json['md_mac_address']
+                rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from Database')
                 abort(_FAILURE_CODE)
