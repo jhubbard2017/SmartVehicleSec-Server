@@ -60,33 +60,43 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
 - `/system/arm` : arm the associated vehicle security system
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/disarm` : disarm the associated vehicle security system
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/security_config` : get the current security config of the system
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : { system_armed : bool, system_breached : bool } }
 - `/system/add_contacts` : add security contacts for a specific mobile client
 
   - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+  - Returns: { code : Int, data : bool }
 - `/system/update_contacts` : update security contacts for a specific mobile client
 
   - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+  - Returns: { code : Int, data : bool }
 - `/system/add_new_device` : setup new mobile app client on the server
 
-  - Required data: { md_mac_address : str, name : str, rd_mac_address : str }
+  - Required data: { md_mac_address : str, name : str, email : str, vehicle : str, rd_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/logs` : get list of logs for a specific client
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : [ { info: str, time : str, date : str } ] }
 - `/system/false_alarm` : set a security breach as a false alarm
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/location` : get gps location of a specific vehicle client
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : { longitude : float, latitude : float } }
 - `/system/temperature` : get temperature data of a specific vehicle client
 
   - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : { fahrenheit : float, celcius : float } }
 
 ### Security client API calls:
 - `/system/add_connection` : add a new security client connection to the server

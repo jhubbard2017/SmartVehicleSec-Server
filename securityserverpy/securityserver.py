@@ -152,7 +152,9 @@ class SecurityServer(object):
 
             required data:
                 md_mac_address: str
-                name: str
+                name: str,
+                email: str,
+                vehicle: str,
                 rd_mac_address: str
             """
             if not request.json or not 'md_mac_address' in request.json:
