@@ -137,9 +137,9 @@ class Database(object):
 
         return success, data
 
-    def add_mobile_device(self, md_mac_address, name):
-        sql = 'INSERT INTO mdevices(md_mac_address, name) VALUES(%s, %s);'
-        values = (md_mac_address, name)
+    def add_mobile_device(self, md_mac_address, name, email, phone, vehicle):
+        sql = 'INSERT INTO mdevices(md_mac_address, name, email, phone, vehicle) VALUES(%s, %s, %s, %s, %s);'
+        values = (md_mac_address, name, email, phone, vehicle)
         return self._commit_sql(sql, values)
 
     def remove_mobile_device(self, md_mac_address):
@@ -147,10 +147,26 @@ class Database(object):
         values = (md_mac_address,)
         return self._commit_sql(sql, values)
 
-    def update_mobile_device(self, md_mac_address, new_name):
-        sql = 'UPDATE mdevices SET name = %s WHERE md_mac_address = %s;'
-        values = (new_name, md_mac_address)
-        return self._commit_sql(sql, values)
+    def update_mobile_device(self, md_mac_address, name=None, email=None, phone=None, vehicle=None):
+        all_success = True
+        if name:
+            sql = 'UPDATE mdevices SET name = %s WHERE md_mac_address = %s;'
+            values = (name, md_mac_address)
+            all_success = all_success and self._commit_sql(sql, values)
+        if email:
+            sql = 'UPDATE mdevices SET email = %s WHERE md_mac_address = %s;'
+            values = (email, md_mac_address)
+            all_success = all_success and self._commit_sql(sql, values)
+        if phone:
+            sql = 'UPDATE mdevices SET phone = %s WHERE md_mac_address = %s;'
+            values = (phone, md_mac_address)
+            all_success = all_success and self._commit_sql(sql, values)
+        if name:
+            sql = 'UPDATE mdevices SET vehicle = %s WHERE md_mac_address = %s;'
+            values = (vehicle, md_mac_address)
+            all_success = all_success and self._commit_sql(sql, values)
+
+        return all_success
 
     def add_raspberry_pi_device(self, md_mac_address, rd_mac_address):
         sql = 'INSERT INTO rdevices(md_mac_address, rd_mac_address) VALUES(%s, %s);'
@@ -219,7 +235,17 @@ class Database(object):
             values = (phone, name, rd_mac_address)
             all_success = all_success and self._commit_sql(sql, values)
 
-        return all_success
+        return
+
+    def remove_contact(self, rd_mac_address, name):
+        sql = 'DELETE FROM contacts WHERE rd_mac_address = %s AND name = %s;'
+        values = (rd_mac_address, name)
+        return self._commit_sql(sql, values)
+
+    def remove_all_contacts(self, rd_mac_address):
+        sql = 'DELETE FROM contacts WHERE rd_mac_address = %s;'
+        values = (rd_mac_address,)
+        return self._commit_sql(sql, values)
 
     def get_contacts(self, rd_mac_address):
         sql = 'SELECT name, email FROM contacts WHERE rd_mac_address = %s;'
