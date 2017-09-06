@@ -125,10 +125,13 @@ class SecurityServer(object):
                 _logger.debug('Failed to get raspberry pi MAC address from Database')
                 abort(_FAILURE_CODE)
 
+            if not self.database.remove_all_contacts(rd_mac_address):
+                _logger.debug('Failed to remove contacts to prepare for update [{0}]'.format(rd_mac_address))
+                abort(_FAILURE_CODE)
+
             contacts = request.json['contacts']
             for contact in contacts:
-                if not self.database.update_contact(rd_mac_address, contact['name'],
-                                                    email=contact['email'], phone=contact['phone']):
+                if not self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone']):
                     _logger.debug('Failed to update contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
                     abort(_FAILURE_CODE)
 
@@ -159,7 +162,10 @@ class SecurityServer(object):
             # Add mobile device to database
             md_mac_address = request.json['md_mac_address']
             name = request.json['name']
-            if not self.database.add_mobile_device(md_mac_address, name):
+            email = request.json['email']
+            phone = request.json['phone']
+            vehicle = request.json['vehicle']
+            if not self.database.add_mobile_device(md_mac_address, name, email, phone, vehicle):
                 _logger.debug('Failed to add mobile device [{0}]'.format(md_mac_address))
                 abort(_FAILURE_CODE)
 

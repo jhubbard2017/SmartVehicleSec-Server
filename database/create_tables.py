@@ -39,7 +39,10 @@ def create_tables():
         """
         CREATE TABLE mdevices (
             md_mac_address VARCHAR(255) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            phone VARCHAR(255) NOT NULL,
+            vehicle VARCHAR(255) NOT NULL
         )
         """,
         """ CREATE TABLE rdevices (
