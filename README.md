@@ -79,7 +79,7 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
   - Returns: { code : Int, data : bool }
 - `/system/add_new_device` : setup new mobile app client on the server
 
-  - Required data: { md_mac_address : str, name : str, email : str, vehicle : str, rd_mac_address : str }
+  - Required data: { md_mac_address : str, name : str, email : str, phone : str, vehicle : str, rd_mac_address : str }
   - Returns: { code : Int, data : bool }
 - `/system/logs` : get list of logs for a specific client
 
