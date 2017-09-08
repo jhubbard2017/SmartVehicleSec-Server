@@ -69,6 +69,14 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
 
   - Required data: { md_mac_address : str }
   - Returns: { code : Int, data : { system_armed : bool, system_breached : bool } }
+- `/system/get_md_device`: checks if mobile device already exist or not
+
+  - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
+- `/system/get_rd_device`: checks if security system already exist for certain mobile device
+
+  - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/add_contacts` : add security contacts for a specific mobile client
 
   - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }

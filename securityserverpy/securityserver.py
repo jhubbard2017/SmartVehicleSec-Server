@@ -221,6 +221,28 @@ class SecurityServer(object):
             _logger.debug('Mobile device [{0}] already exist'.format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
+        @abort.route('/system/get_rd_device', methods=['POST'])
+        def get_rd_device():
+            """API route to check if mobile device exist
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            if not self.database.get_raspberry_pi_device(md_mac_address):
+                _logger.debug('Security device for [{0}] does not exist'.format(md_mac_address))
+                return jsonify({'code': _SUCCESS_CODE, 'data': False})
+
+            _logger.debug('Security device for [{0}] already exist'.format(md_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
             """API route to arm a security system
