@@ -168,6 +168,15 @@ class Database(object):
 
         return all_success
 
+    def get_mobile_device(self, md_mac_address):
+        sql = 'SELECT md_mac_address FROM mdevices WHERE md_mac_address = %s;'
+        values = (md_mac_address,)
+        self._commit_sql(sql, values)
+        data = self._fetch_one_data()
+        if not data:
+            return None
+        return data[0]
+
     def add_raspberry_pi_device(self, md_mac_address, rd_mac_address):
         sql = 'INSERT INTO rdevices(md_mac_address, rd_mac_address) VALUES(%s, %s);'
         values = (md_mac_address, rd_mac_address)

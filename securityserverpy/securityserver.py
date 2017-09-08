@@ -45,7 +45,15 @@ class SecurityServer(object):
         # In order to recieve a successful request code and expected data, the device MAC address must exist in the database
 
         def abort(message):
-            return jsonify({'code': _FAILURE_CODE, 'message': message})
+            """error handling method for FLASK
+
+            args:
+                message: str
+
+            returns:
+                {code: int, data: bool, message: str}
+            """
+            return jsonify({'code': _FAILURE_CODE, 'data': False, 'message': message})
 
         @app.route('/system/security_config', methods=['POST'])
         def get_security_config():
@@ -67,15 +75,12 @@ class SecurityServer(object):
                 rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from Database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             security_config = self.database.get_security_config(rd_mac_address)
             if not security_config:
                 _logger.debug('Failed to get security config for [{0}]'.format(rd_mac_address))
-                if 'md_mac_address' in request.json:
-                    return abort('Failed to get security system from server')
-                else:
-                    return jsonify({'code': _SUCCESS_CODE, 'data': False})
+                return abort('Failed to get security system from server')
 
             _logger.debug("Successful! Sending security config to client [{0}]".format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': security_config})
@@ -192,6 +197,28 @@ class SecurityServer(object):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
             _logger.debug("Successful! Added new devices [{0}] [{1}]".format(md_mac_address, rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/get_md_device', methods=['POST'])
+        def get_device():
+            """API route to check if mobile device exist
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            if not self.database.get_mobile_device(md_mac_address):
+                _logger.debug('Mobile device [{0}] does not exist'.format(md_mac_address))
+                return jsonify({'code': _SUCCESS_CODE, 'data': False})
+
+            _logger.debug('Mobile device [{0}] already exist'.format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/arm', methods=['POST'])
@@ -567,7 +594,7 @@ class SecurityServer(object):
             for contact in contacts:
                 if not self.panic_response.send_message(contacts['email']):
                     _logger.debug("Failed to send email to[{0}]".format(contacts['email']))
-                    abort('Failed to send email')
+                    abort('Failed to send panic response email')
 
             # Todo: figure out way of notifying associated mobile app client
 

@@ -114,6 +114,11 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
 - `/system/panic` : set panic response for specific security system
 
   - Required data: { rd_mac_address : str }
+  
+### Error handling:
+- When error has occurred on server, the following json response is returned:
+
+  - { code : int, data : false, message : str }
 
 # Python Details
 ## first time python setup
