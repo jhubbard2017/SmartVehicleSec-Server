@@ -95,7 +95,7 @@ class Database(object):
             _logger.debug('Database error: [{0}]'.format(error))
             return not success
 
-        return success, data
+        return data
 
     def _fetch_one_data(self):
         """fetches a single row of the resulting data set from the previous query sql
@@ -114,7 +114,7 @@ class Database(object):
             _logger.debug('Database error: [{0}]'.format(error))
             return not success
 
-        return success, data
+        return data
 
     def _fetch_many_data(self, count):
         """fetches a certain number of data from the resulting set
@@ -135,7 +135,7 @@ class Database(object):
             _logger.debug('Database error: [{0}]'.format(error))
             return not success
 
-        return success, data
+        return data
 
     def add_mobile_device(self, md_mac_address, name, email, phone, vehicle):
         sql = 'INSERT INTO mdevices(md_mac_address, name, email, phone, vehicle) VALUES(%s, %s, %s, %s, %s);'
@@ -182,8 +182,8 @@ class Database(object):
         sql = 'SELECT rd_mac_address from rdevices WHERE md_mac_address = %s;'
         values = (md_mac_address,)
         self._commit_sql(sql, values)
-        success, data = self._fetch_one_data()
-        if not success:
+        data = self._fetch_one_data()
+        if not data:
             return None
         return data[0]
 
@@ -209,10 +209,10 @@ class Database(object):
         sql = 'SELECT ip_address, port FROM connections WHERE rd_mac_address = %s;'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
-        success, data = self._fetch_one_data()
-        if not success or not data or len(data) == 0:
-            return None, None
-        return success, {'ip_address': data[0], 'port': data[1]}
+        data = self._fetch_one_data()
+        if not data or len(data) == 0:
+            return None
+        return {'ip_address': data[0], 'port': data[1]}
 
     def remove_raspberry_pi_connection(self, rd_mac_address):
         sql = 'DELETE FROM connections WHERE rd_mac_address = %s;'
@@ -251,8 +251,8 @@ class Database(object):
         sql = 'SELECT name, email FROM contacts WHERE rd_mac_address = %s;'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
-        success, data = self._fetch_all_data()
-        if not success:
+        data = self._fetch_all_data()
+        if not data:
             return None
         return [{'name': contact[0], 'email': contact[1]} for contact in data]
 
@@ -268,8 +268,8 @@ class Database(object):
         sql = 'SELECT info, date, time FROM logs WHERE rd_mac_address = %s;'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
-        success, data = self._fetch_all_data()
-        if not success:
+        data = self._fetch_all_data()
+        if not data:
             return None
         return [{'info': log[0], 'date': log[1], 'time': log[2]} for log in data]
 
@@ -299,8 +299,8 @@ class Database(object):
         sql = 'SELECT system_armed, system_breached FROM securityconfig WHERE rd_mac_address = %s'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
-        success, data = self._fetch_one_data()
-        if not success:
+        data = self._fetch_one_data()
+        if not data:
             return None
         return {'system_armed': data[0], 'system_breached': data[1]}
 

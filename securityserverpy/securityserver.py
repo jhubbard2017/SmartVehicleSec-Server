@@ -56,10 +56,10 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json and not 'rd_mac_address' in request.json:
                 _logger.debug("No device found in request data")
-                abort('No device found')
+                return abort('No device found')
             if 'rd_mac_address' in request.json:
                 rd_mac_address = request.json['rd_mac_address']
             else:
@@ -72,7 +72,10 @@ class SecurityServer(object):
             security_config = self.database.get_security_config(rd_mac_address)
             if not security_config:
                 _logger.debug('Failed to get security config for [{0}]'.format(rd_mac_address))
-                abort('Failed to get security system information')
+                if 'md_mac_address' in request.json:
+                    return abort('Failed to get security system from server')
+                else:
+                    return jsonify({'code': _SUCCESS_CODE, 'data': False})
 
             _logger.debug("Successful! Sending security config to client [{0}]".format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': security_config})
@@ -87,22 +90,22 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from Database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             contacts = request.json['contacts']
             for contact in contacts:
                 if not self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone']):
                     _logger.debug('Failed to add contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
-                    abort('Failed to add contact recipients')
+                    return abort('Failed to add contact recipients')
 
             if not self.database.add_log(rd_mac_address, 'Added security contacts.'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -120,26 +123,26 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from Database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             if not self.database.remove_all_contacts(rd_mac_address):
                 _logger.debug('Failed to remove contacts to prepare for update [{0}]'.format(rd_mac_address))
-                abort('Failed to update contact recipients')
+                return abort('Failed to update contact recipients')
 
             contacts = request.json['contacts']
             for contact in contacts:
                 if not self.database.add_contact(rd_mac_address, contact['name'], contact['email'], contact['phone']):
                     _logger.debug('Failed to update contact [{0}] for [{1}]'.format(contact['name'], rd_mac_address))
-                    abort('Failed to update contact recipients')
+                    return abort('Failed to update contact recipients')
 
             if not self.database.add_log(rd_mac_address, 'Updated security contacts.'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -164,10 +167,10 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             # Add mobile device to database
             md_mac_address = request.json['md_mac_address']
@@ -177,13 +180,13 @@ class SecurityServer(object):
             vehicle = request.json['vehicle']
             if not self.database.add_mobile_device(md_mac_address, name, email, phone, vehicle):
                 _logger.debug('Failed to add mobile device [{0}]'.format(md_mac_address))
-                abort('Failed to add device to server')
+                return abort('Failed to add device to server')
 
             # Add raspberry pi for mobile device to database
             rd_mac_address = request.json['rd_mac_address']
             if not self.database.add_raspberry_pi_device(md_mac_address, rd_mac_address):
                 _logger.debug('Failed to add raspberry pi device [{0}]'.format(rd_mac_address))
-                abort('Failed to add security system to server')
+                return abort('Failed to add security system to server')
 
             if not self.database.add_log(rd_mac_address, 'Added new device: [{0}]'.format(name)):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -200,32 +203,32 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             if not self.database.update_security_config(rd_mac_address, system_armed=True):
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
-                abort('Failed to arm system.')
+                return abort('Failed to arm system.')
 
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
                 _logger.debug('Failed to get raspberry pi connection from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             # send command to raspberry pi
             url = 'http://{0}:{1}/system/arm'.format(connection['ip_address'], connection['port'])
             data = self.send_request(rd_mac_address, url)
             if data == None:
                 _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
-                abort('Failed to connect to security system')
+                return abort('Failed to connect to security system')
 
             if not self.database.add_log(rd_mac_address, 'System armed'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -242,32 +245,32 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             if not self.database.update_security_config(rd_mac_address, system_armed=False):
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
-                abort('Failed to disarm system')
+                return abort('Failed to disarm system')
 
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
                 _logger.debug('Failed to get raspberry pi connection from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             # send command to raspberry pi
             url = 'http://{0}:{1}/system/disarm'.format(connection['ip_address'], connection['port'])
             data = self.send_request(rd_mac_address, url)
             if data == None:
                 _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
-                abort('Failed to connect to security system')
+                return abort('Failed to connect to security system')
 
             if not self.database.add_log(rd_mac_address, 'System disarmed'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -284,21 +287,21 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             logs = self.database.get_logs(rd_mac_address)
             if not logs:
                 _logger.debug('Failed to get logs for raspberry pi device [{0}]'.format(rd_mac_address))
-                abort('Failed to get logs from server')
+                return abort('Failed to get logs from server')
 
             _logger.debug("Successful! Sending logs from [{0}] to [{1}]".format(rd_mac_address, md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': logs})
@@ -312,32 +315,32 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             if not self.database.update_security_config(rd_mac_address, system_breached=False):
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
-                abort('Failed to set breach as false alarm')
+                return abort('Failed to set breach as false alarm')
 
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
                 _logger.debug('Failed to get raspberry pi connection from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             # send request to raspberry pi
             url = 'http://{0}:{1}/system/false_alarm'.format(connection['ip_address'], connection['port'])
             data = self.send_request(rd_mac_address, url)
             if data == None:
                 _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
-                abort('Failed to connect to security system')
+                return abort('Failed to connect to security system')
 
             if not self.database.add_log(rd_mac_address, 'Security breach false alarm'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
@@ -354,28 +357,28 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
                 _logger.debug('Failed to get raspberry pi connection from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             # Send request to raspberry pi and get data
             url = 'http://{0}:{1}/system/location'.format(connection['ip_address'], connection['port'])
             data = self.send_request(rd_mac_address, url)
             if data == None:
                 _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
-                abort('Failed to connect to security system')
+                return abort('Failed to connect to security system')
 
             _logger.debug("Successful! Send gps coordinates from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
@@ -389,28 +392,28 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'md_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
                 _logger.debug('Failed to get raspberry pi MAC address from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
                 _logger.debug('Failed to get raspberry pi connection from database')
-                abort('Failed to get security system from server')
+                return abort('Failed to get security system from server')
 
             # Send request to raspberry pi and get data
             url = 'http://{0}:{1}/system/temperature'.format(connection['ip_address'], connection['port'])
             data = self.send_request(rd_mac_address, url)
             if data == None:
                 _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
-                abort('Failed to connect to security system')
+                return abort('Failed to connect to security system')
 
             _logger.debug("Successful! Sending temperature information from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
@@ -426,15 +429,15 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
             if not self.database.add_security_config(rd_mac_address):
                 _logger.debug('Failed to add security config for raspberry pi device [{0}]'.format(rd_mac_address))
-                abort('Failed to add security config')
+                return abort('Failed to add security config')
 
             _logger.debug("Successful! Create security config for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
@@ -450,17 +453,17 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
             ip_address = request.json['ip_address']
             port = request.json['port']
             if not self.database.add_raspberry_pi_connection(rd_mac_address, ip_address, port):
                 _logger.debug('Failed to add raspberry pi connection [{0}]'.format(rd_mac_address))
-                abort('Failed to add connection')
+                return abort('Failed to add connection')
 
             _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
@@ -476,17 +479,17 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
             ip_address = request.json['ip_address']
             port = request.json['port']
             if not self.database.update_raspberry_pi_connection(rd_mac_address, ip_address=ip_address, port=port):
                 _logger.debug('Failed to update raspberry pi connection [{0}]'.format(rd_mac_address))
-                abort('Failed to update connection')
+                return abort('Failed to update connection')
 
             _logger.debug("Successful! Updated raspberry pi connection [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
@@ -500,19 +503,17 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
-            success, connection = self.database.get_raspberry_pi_connection(rd_mac_address)
-            if not success:
-                _logger.debug('Failed to get raspberry pi connection [{0}]'.format(rd_mac_address))
-                abort('Failed to get connection')
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
 
             if not connection:
-                jsonify({'code': _SUCCESS_CODE, 'data': False})
+                _logger.debug('Failed to get raspberry pi connection [{0}]'.format(rd_mac_address))
+                return jsonify({'code': _SUCCESS_CODE, 'data': False})
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/set_breached', methods=['POST'])
@@ -524,16 +525,16 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
             success = self.database.update_security_config(rd_mac_address, system_breached=True)
             if not success:
                 _logger.debug('Failed to update security config for [{0}]'.format(rd_mac_address))
-                abort('Failed to update security config')
+                return abort('Failed to update security config')
 
             # Todo: figure out way of notifying associated mobile app client
 
@@ -552,16 +553,16 @@ class SecurityServer(object):
             """
             if not request.json:
                 _logger.debug("Error! JSON does not exist")
-                abort('No data found')
+                return abort('No data found')
             if not 'rd_mac_address' in request.json:
                 _logger.debug("Error! Device not found in request data.")
-                abort('No device found')
+                return abort('No device found')
 
             rd_mac_address = request.json['rd_mac_address']
             contacts = self.database.get_contacts(rd_mac_address)
             if not contacts:
                 _logger.debug("Failed to get contacts for [{0}]".format(rd_mac_address))
-                abort('Failed to get contacts')
+                return abort('Failed to get contacts')
 
             for contact in contacts:
                 if not self.panic_response.send_message(contacts['email']):
