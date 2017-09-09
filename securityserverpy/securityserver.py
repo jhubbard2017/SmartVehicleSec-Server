@@ -221,7 +221,7 @@ class SecurityServer(object):
             _logger.debug('Mobile device [{0}] already exist'.format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
-        @abort.route('/system/get_rd_device', methods=['POST'])
+        @app.route('/system/get_rd_device', methods=['POST'])
         def get_rd_device():
             """API route to check if mobile device exist
 
