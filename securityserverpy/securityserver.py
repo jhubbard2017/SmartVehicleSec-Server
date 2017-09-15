@@ -549,6 +549,41 @@ class SecurityServer(object):
             _logger.debug("Successful! Sending temperature information from [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': data})
 
+        @app.route('/system/speedometer', methods=["POST"])
+        def get_speedometer_data():
+            """API route to get speedometer data from a raspberry pi system
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from database')
+                return abort('Failed to get security system from server')
+
+            connection = self.database.get_raspberry_pi_connection(rd_mac_address)
+            if not connection:
+                _logger.debug('Failed to get raspberry pi connection from database')
+                return abort('Failed to get security system from server')
+
+            # Send request to raspberry pi and get data
+            url = 'http://{0}:{1}/system/speedometer'.format(connection['ip_address'], connection['port'])
+            data = self.send_request(rd_mac_address, url)
+            if data == None:
+                _logger.debug('Failed to send request to [{0}] [{1}]'.format(rd_mac_address, url))
+                return abort('Failed to connect to security system')
+
+            _logger.debug("Successful! Sending speedometer information from [{0}]".format(rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+
         #-------- API calls specifically from raspberry pi (security system) -----------
 
         @app.route('/system/create_securityconfig', methods=['POST'])

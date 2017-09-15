@@ -118,6 +118,10 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
 
   - Required data: { md_mac_address : str }
   - Returns: { code : Int, data : { fahrenheit : float, celcius : float } }
+- `/system/speedometer` : gets speedometer data of a specific vehicle client
+
+  - Required dataL { md_mac_address : str }
+  - Returns: { code : Int, data : { speed : str, altitude : str, heading : str, climb : str } }
 
 ### Security client API calls:
 - `/system/add_connection` : add a new security client connection to the server
