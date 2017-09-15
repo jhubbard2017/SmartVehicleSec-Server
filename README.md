@@ -79,16 +79,29 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
   - Returns: { code : Int, data : bool }
 - `/system/add_contacts` : add security contacts for a specific mobile client
 
-  - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+  - Required data: { md_mac_address : str, contacts : [ { name, email, phone : str } ] }
   - Returns: { code : Int, data : bool }
 - `/system/update_contacts` : update security contacts for a specific mobile client
 
-  - Required data: { md_mac_address : str, contacts : [ { name, email, phone } ] }
+  - Required data: { md_mac_address : str, contacts : [ { name, email, phone : str } ] }
   - Returns: { code : Int, data : bool }
+- `/system/get_contacts`: gets emergency contacts for a specific mobile device
+
+  - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : [{ name, email, phone : str }] }
 - `/system/add_new_device` : setup new mobile app client on the server
 
   - Required data: { md_mac_address : str, name : str, email : str, phone : str, vehicle : str, rd_mac_address : str }
   - Returns: { code : Int, data : bool }
+  
+- `/system/get_device_info` : get mobile device information on the server
+
+  - Required data: { md_mac_address : str }
+  - Returns : { code : int, data : { name : str, email : str, phone : str, vehicle : str } }
+- `/system/update_device_info` : update device information for specific device
+
+  - Required data: { md_mac_address : str, name (optional) : str, email (optional) : str, phone (optional) : str, vehicle (optional) : str }
+  - Returns : { code : int, data : bool }
 - `/system/logs` : get list of logs for a specific client
 
   - Required data: { md_mac_address : str }

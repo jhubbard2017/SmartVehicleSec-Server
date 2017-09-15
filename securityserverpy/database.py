@@ -177,6 +177,15 @@ class Database(object):
             return None
         return data[0]
 
+    def get_mobile_device_information(self, md_mac_address):
+        sql = 'SELECT name, email, phone, vehicle FROM mdevices WHERE md_mac_address = %s;'
+        values = (md_mac_address,)
+        self._commit_sql(self, values)
+        data = self._fetch_one_data()
+        if not data:
+            return None
+        return {"name": data[0], "email": data[1], "phone": data[2], "vehicle": data[3]}
+
     def add_raspberry_pi_device(self, md_mac_address, rd_mac_address):
         sql = 'INSERT INTO rdevices(md_mac_address, rd_mac_address) VALUES(%s, %s);'
         values = (md_mac_address, rd_mac_address)
@@ -257,13 +266,13 @@ class Database(object):
         return self._commit_sql(sql, values)
 
     def get_contacts(self, rd_mac_address):
-        sql = 'SELECT name, email FROM contacts WHERE rd_mac_address = %s;'
+        sql = 'SELECT name, email, phone FROM contacts WHERE rd_mac_address = %s;'
         values = (rd_mac_address,)
         self._commit_sql(sql, values)
         data = self._fetch_all_data()
         if not data:
             return None
-        return [{'name': contact[0], 'email': contact[1]} for contact in data]
+        return [{'name': contact[0], 'email': contact[1], 'phone': contact[2]} for contact in data]
 
     def add_log(self, rd_mac_address, info):
         current_date = datetime.datetime.now()

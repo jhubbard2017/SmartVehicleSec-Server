@@ -155,6 +155,35 @@ class SecurityServer(object):
             _logger.debug("Successful! Updated contacts for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
+        @app.route('system/get_contacts', methods=['POST'])
+        def get_contacts():
+            """API route to get contacts for a specific mobile/system device
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                _logger.debug('Failed to get raspberry pi MAC address from Database')
+                return abort('Failed to get security system from server')
+
+            contacts = self.database.get_contacts(rd_mac_address)
+            if not contacts:
+                _logger.debug('Failed to get contacts from database for [{0}]'.format(rd_mac_address))
+                return abort('Failed to get contact recipients')
+
+            _logger.debug('Sending contacts to device [{0}]'.format(md_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': contacts})
+
+
         @app.route('/system/add_new_device', methods=['POST'])
         def add_new_device():
             """API route to add new mobile device and associated raspberry pi device to server
@@ -197,6 +226,59 @@ class SecurityServer(object):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
             _logger.debug("Successful! Added new devices [{0}] [{1}]".format(md_mac_address, rd_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+
+        @app.route('/system/get_device_info', methods=['POST'])
+        def get_device_info():
+            """API route to get mobile device information
+
+            required data:
+                md_mac_address: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            info = self.database.get_mobile_device_information(md_mac_address)
+            if not info:
+                _logger.debug('Error getting information for [{0}]'.format(md_mac_address))
+                return abort("Error getting device information")
+
+            _logger.debug('Sending mobile device information for [{0}]'.format(md_mac_address))
+            return jsonify({'code': _SUCCESS_CODE, 'data': info})
+
+        @app.route('/system/update_device_info', methods=['POST'])
+        def update_device_info():
+            """API route to update mobile device information
+
+            required data:
+                md_mac_address: str
+                name: str
+                email: str
+                phone: str
+                vehicle: str
+            """
+            if not request.json:
+                _logger.debug("Error! JSON does not exist")
+                return abort('No data found')
+            if not 'md_mac_address' in request.json:
+                _logger.debug("Error! Device not found in request data.")
+                return abort('No device found')
+
+            md_mac_address = request.json['md_mac_address']
+            name = request.json['name']
+            email = request.json['email']
+            phone = request.json['phone']
+            vehicle = request.json['vehicle']
+            if not self.database.update_mobile_device(md_mac_address, name=name, email=email, phone=phone, vehicle=vehicle):
+                _logger.debug('Error updating information for [{0}]'.format(md_mac_address))
+                return abort("Error updating device information")
+
+            _logger.debug('Updated mobile device information for [{0}]'.format(md_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
         @app.route('/system/get_md_device', methods=['POST'])
