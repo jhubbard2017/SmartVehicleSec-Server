@@ -155,7 +155,7 @@ class SecurityServer(object):
             _logger.debug("Successful! Updated contacts for [{0}]".format(rd_mac_address))
             return jsonify({'code': _SUCCESS_CODE, 'data': True})
 
-        @app.route('system/get_contacts', methods=['POST'])
+        @app.route('/system/get_contacts', methods=['POST'])
         def get_contacts():
             """API route to get contacts for a specific mobile/system device
 
