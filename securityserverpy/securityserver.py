@@ -82,7 +82,11 @@ class SecurityServer(object):
                 _logger.debug('Failed to get security config for [{0}]'.format(rd_mac_address))
                 return abort('Failed to get security system from server')
 
-            _logger.debug("Successful! Sending security config to client [{0}]".format(md_mac_address))
+            if 'rd_mac_address' in request.json:
+                _logger.debug("Successful! Sending security config to client [{0}]".format(rd_mac_address))
+            else:
+                _logger.debug("Successful! Sending security config to client [{0}]".format(md_mac_address))
+
             return jsonify({'code': _SUCCESS_CODE, 'data': security_config})
 
         @app.route('/system/add_contacts', methods=['POST'])
