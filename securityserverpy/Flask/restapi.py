@@ -66,8 +66,7 @@ class RestAPI(object):
                 error = 'Failed to get security config from server'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Sending security config for [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': security_config})
+            return self.success_with_message(request.path, data=security_config)
 
         @app.route('/system/add_contacts', methods=['POST'])
         def add_contacts():
@@ -98,8 +97,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'Added security contacts.'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Added contacts for [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/update_contacts', methods=['POST'])
         def update_contacts():
@@ -134,8 +132,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'Updated security contacts.'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Updated contacts for [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/get_contacts', methods=['POST'])
         def get_contacts():
@@ -161,8 +158,7 @@ class RestAPI(object):
                 error = 'Failed to get contact recipients'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug('Sending contacts to device [{0}]'.format(md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': contacts})
+            return self.success_with_message(request.path, data=contacts)
 
         @app.route('/system/add_new_device', methods=['POST'])
         def add_new_device():
@@ -203,8 +199,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'Added new device: [{0}]'.format(name)):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Added new devices [{0}] [{1}]".format(md_mac_address, rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/get_device_info', methods=['POST'])
         def get_device_info():
@@ -223,8 +218,7 @@ class RestAPI(object):
                 error = 'Error getting device information'
                 return self.abort_with_message(error, device=md_mac_address)
 
-            _logger.debug('Sending mobile device information for [{0}]'.format(md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': info})
+            return self.success_with_message(request.path, data=info)
 
         @app.route('/system/update_device_info', methods=['POST'])
         def update_device_info():
@@ -251,8 +245,7 @@ class RestAPI(object):
                 error = 'Failed to update device information'
                 return self.abort_with_message(error, device=md_mac_address)
 
-            _logger.debug('Updated mobile device information for [{0}]'.format(md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/get_md_device', methods=['POST'])
         def get_device():
@@ -270,8 +263,7 @@ class RestAPI(object):
                 _logger.debug('Mobile device [{0}] does not exist'.format(md_mac_address))
                 return jsonify({'code': _SUCCESS_CODE, 'data': False})
 
-            _logger.debug('Mobile device [{0}] already exist'.format(md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/get_rd_device', methods=['POST'])
         def get_rd_device():
@@ -286,11 +278,9 @@ class RestAPI(object):
 
             md_mac_address = request.json['md_mac_address']
             if not self.database.get_raspberry_pi_device(md_mac_address):
-                _logger.debug('Security device for [{0}] does not exist'.format(md_mac_address))
-                return jsonify({'code': _SUCCESS_CODE, 'data': False})
+                return self.success_with_message(request.path, data=False)
 
-            _logger.debug('Security device for [{0}] already exist'.format(md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/arm', methods=['POST'])
         def arm_system():
@@ -326,8 +316,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'System armed'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Armed system [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/disarm', methods=['POST'])
         def disarm_system():
@@ -363,8 +352,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'System disarmed'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Disarmed system [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+            return self.success_with_message(request.path)
 
         @app.route('/system/logs', methods=['POST'])
         def get_logs():
@@ -388,8 +376,7 @@ class RestAPI(object):
                 error = 'Failed to get logs from server'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Sending logs from [{0}] to [{1}]".format(rd_mac_address, md_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': logs})
+            return self.success_with_message(request.path, data=logs)
 
         @app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
@@ -424,8 +411,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'Security breach false alarm'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Updated security config for system [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            return self.success_with_message(request.path)
 
         @app.route('/system/location', methods=["POST"])
         def get_location_coordinates():
@@ -454,8 +440,7 @@ class RestAPI(object):
                 error = 'Failed to send request to client'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Send gps coordinates from [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+            return self.success_with_message(request.path, data=data)
 
         @app.route('/system/temperature', methods=["POST"])
         def get_temperature():
@@ -485,8 +470,7 @@ class RestAPI(object):
                 error = 'Failed to send request to client'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Sending temperature information from [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+            return self.success_with_message(request.path, data=data)
 
         @app.route('/system/speedometer', methods=["POST"])
         def get_speedometer_data():
@@ -516,8 +500,7 @@ class RestAPI(object):
                 error = 'Failed to send request to client'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Sending speedometer information from [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': data})
+            return self.success_with_message(request.path, data=data)
 
 
         #-------- API calls specifically from raspberry pi (security system) -----------
@@ -538,8 +521,7 @@ class RestAPI(object):
                 error = 'Failed to add security config'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Create security config for [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/add_connection', methods=['POST'])
         def add_connection():
@@ -562,8 +544,7 @@ class RestAPI(object):
                 error = 'Failed to add connection'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Added raspberry pi connection [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/update_connection', methods=['POST'])
         def update_connection():
@@ -586,8 +567,7 @@ class RestAPI(object):
                 error = 'Failed to updated connection'
                 return self.abort_with_message(error, device=rd_mac_address)
 
-            _logger.debug("Successful! Updated raspberry pi connection [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/get_connection', methods=['POST'])
         def get_connection():
@@ -604,9 +584,9 @@ class RestAPI(object):
             connection = self.database.get_raspberry_pi_connection(rd_mac_address)
             if not connection:
                 _logger.debug('Failed to get raspberry pi connection [{0}]'.format(rd_mac_address))
-                return jsonify({'code': _SUCCESS_CODE, 'data': False})
+                return self.success_with_message(request.path, data=False)
 
-            return jsonify({'code': _SUCCESS_CODE, 'data': True})
+            return self.success_with_message(request.path)
 
         @app.route('/system/set_breached', methods=['POST'])
         def set_system_breached():
@@ -620,8 +600,7 @@ class RestAPI(object):
                 return self.abort_with_message(error)
 
             rd_mac_address = request.json['rd_mac_address']
-            success = self.database.update_security_config(rd_mac_address, system_breached=True)
-            if not success:
+            if not self.database.update_security_config(rd_mac_address, system_breached=True):
                 error = 'Failed to update security config'
                 return self.abort_with_message(error, device=rd_mac_address)
 
@@ -630,8 +609,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'System breached'):
                 _logger.debug('Failed to add log for [{0}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Updated security config for [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            self.success_with_message(request.path)
 
         @app.route('/system/panic', methods=['POST'])
         def panic_reponse():
@@ -670,8 +648,7 @@ class RestAPI(object):
             if not self.database.add_log(rd_mac_address, 'Panic response initiated'):
                 _logger.debug('Failed to add log for [{1}]'.format(rd_mac_address))
 
-            _logger.debug("Successful! Sent panic email to contacts from [{0}]".format(rd_mac_address))
-            return jsonify({'code': _SUCCESS_CODE, 'data': success})
+            self.success_with_message(request.path)
 
     def abort_with_message(self, error, device='Unknown'):
         """error handling method for FLASK API calls
@@ -683,7 +660,20 @@ class RestAPI(object):
             jsonify({code, data, message})
         """
         _logger.info('Aborting with error: [{0}] for device [{1}]'.format(message, device))
-        return jsonify({'code': _FAILURE_CODE, 'message': error})
+        return jsonify({'code': self._FAILURE_CODE, 'message': error})
+
+    def success_with_message(self, path, data=True):
+        """success handler method for FLASK API calls
+
+        args:
+            message: str
+            data: {}/bool
+
+        returns:
+            jsonify()
+        """
+        _logger.debug('Success! Sending data for path [{0}]'.format(path))
+        return jsonify({'code': self._SUCCESS_CODE, 'data': data})
 
     def start(self):
         """method to start the flask server"""
