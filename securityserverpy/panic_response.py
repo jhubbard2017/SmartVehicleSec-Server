@@ -30,7 +30,7 @@ class PanicResponse(object):
     def __init__(self):
         self.total_emails_sent = 0
 
-    def send_message(self, email_address):
+    def send_message(self, email_address, device_info):
         """sends warning message (email) to contact with name
 
         returns:
@@ -38,7 +38,7 @@ class PanicResponse(object):
         """
         success = True
 
-        sent = self.construct_email_and_send(email_address)
+        sent = self.construct_email_and_send(email_address, device_info)
         if not sent:
             _logger.debug('Error. Email could not be sent to [{0}]'.format(contact['email']))
             return not success
@@ -46,7 +46,7 @@ class PanicResponse(object):
         return success
 
 
-    def construct_email_and_send(self, email_addr):
+    def construct_email_and_send(self, email_addr, device_info):
         """constructs an HTML email and sends to specified recipient
 
         args:
@@ -64,7 +64,7 @@ class PanicResponse(object):
 
         # Create both plaintext and html version so that email application can render either when needed
         plaintext_version = "Plaintext version"
-        html_version = "HTML version"
+        html_version = "HTML version {0}".format(device_info['name'])
         plaintext = MIMEText(plaintext_version, 'plain')
         html = MIMEText(html_version, 'html')
 
