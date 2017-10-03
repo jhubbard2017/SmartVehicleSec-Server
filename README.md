@@ -49,7 +49,7 @@ $ psql -d smartVSecDatabase -h localhost
 - Once you have successfully set up the database, you can use the `create_tables.py` file to set up the tables in the database.
 This assumes you are in the virtual environment `venv-securityserverpy`. See details above.
 ```shell
-(venv-securityserverpy) $ python database/create_tables.py
+(venv-securityserverpy) $ python securityserverpy/Database/create_tables.py
 ```
 
 # REST API

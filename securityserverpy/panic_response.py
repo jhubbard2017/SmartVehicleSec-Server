@@ -57,8 +57,6 @@ class PanicResponse(object):
         """
         success = True
 
-        device_info['vehicle']
-
         email = MIMEMultipart('alternative')
         email['Subject'] = PanicResponse._SYSTEM_EMAIL_SUBJECT.format(email)
         email['From'] = PanicResponse._SYSTEM_EMAIL
@@ -66,7 +64,7 @@ class PanicResponse(object):
 
         # Create both plaintext and html version so that email application can render either when needed
         plaintext_version = "Plaintext version"
-        html_version = "HTML version"
+        html_version = "HTML version {0}".format(device_info['name'])
         plaintext = MIMEText(plaintext_version, 'plain')
         html = MIMEText(html_version, 'html')
 

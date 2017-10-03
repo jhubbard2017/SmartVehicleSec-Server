@@ -6,7 +6,7 @@
 import psycopg2
 from configparser import ConfigParser
 
-_CONFIG_PATH = 'database/database.ini'
+_CONFIG_PATH = 'securityserverpy/Database/database.ini'
 
 def _get_database_info(filename, section='postgresql'):
     """retrieves database info from file and returns it
