@@ -5,7 +5,7 @@
 
 import requests
 
-from securityclientpy import _logger
+from securityserverpy import _logger
 
 
 class ClientRequests(object):

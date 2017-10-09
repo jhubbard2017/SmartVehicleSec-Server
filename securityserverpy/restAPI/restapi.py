@@ -8,12 +8,11 @@ from flask import jsonify
 from flask import request
 
 from securityserverpy import _logger
-from securityserverpy.Flask.error_handling import APIErrorHandling
+from securityserverpy.restAPI.error_handling import APIErrorHandling
 from securityserverpy.client_requests import ClientRequests
-from securityserverpy.Database.database import Database
+from securityserverpy.database.database import Database
 from securityserverpy.panic_response import PanicResponse
 
-app = Flask(__name__)
 
 class RestAPI(object):
     """Module for controlling rest api calls and methods"""
@@ -25,6 +24,7 @@ class RestAPI(object):
     def __init__(self, host, port, testing=False, dev=False):
         """constructor method"""
 
+        self.app = Flask(__name__)
         self.host = host
         self.port = port
 
@@ -32,15 +32,16 @@ class RestAPI(object):
         self.testing = testing
         self.dev = dev
 
-        self.database = Database()
+        if not self.testing:
+            self.database = Database()
         self.panic_response = PanicResponse()
-        self.error_handling = FlaskErrorHandling()
         self.client_requests = ClientRequests()
+        self.error_handling = APIErrorHandling()
 
         # We use inner methods for the flask api route methods so that they can access the self pointer
         # of this class.
 
-        @app.route('/system/security_config', methods=['POST'])
+        @self.app.route('/system/security_config', methods=['POST'])
         def get_security_config():
             """API route to get system_armed security config value
 
@@ -68,7 +69,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path, data=security_config)
 
-        @app.route('/system/add_contacts', methods=['POST'])
+        @self.app.route('/system/add_contacts', methods=['POST'])
         def add_contacts():
             """API route to add trustworthy contacts for a raspberry pi system
 
@@ -77,7 +78,7 @@ class RestAPI(object):
                 contacts: [{}]
             """
             status, error = self.error_handling.check_system_request(
-                request.json, keys=['md_mac_address', 'contacts'], all_should_exists=True
+                request.json, keys=['md_mac_address', 'contacts'], all_should_exist=True
             )
             if not status:
                 return self.abort_with_message(error)
@@ -99,7 +100,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/update_contacts', methods=['POST'])
+        @self.app.route('/system/update_contacts', methods=['POST'])
         def update_contacts():
             """API route to update trustworthy contacts for a raspberry pi system
 
@@ -108,7 +109,7 @@ class RestAPI(object):
                 contacts: [{}]
             """
             status, error = self.error_handling.check_system_request(
-                request.json, keys=['md_mac_address', 'contacts'], all_should_exists=True
+                request.json, keys=['md_mac_address', 'contacts'], all_should_exist=True
             )
             if not status:
                 return self.abort_with_message(error)
@@ -134,7 +135,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/get_contacts', methods=['POST'])
+        @self.app.route('/system/get_contacts', methods=['POST'])
         def get_contacts():
             """API route to get contacts for a specific mobile/system device
 
@@ -142,7 +143,7 @@ class RestAPI(object):
                 md_mac_address: str
             """
             status, error = self.error_handling.check_system_request(
-                request.json, keys=['md_mac_address'], all_should_exists=True
+                request.json, keys=['md_mac_address'], all_should_exist=True
             )
             if not status:
                 return self.abort_with_message(error)
@@ -150,17 +151,18 @@ class RestAPI(object):
             md_mac_address = request.json['md_mac_address']
             rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
             if not rd_mac_address:
-                error = 'Failed to get security system from server'
+                error = 'Failed to get client from server'
                 return self.abort_with_message(error, device=md_mac_address)
 
             contacts = self.database.get_contacts(rd_mac_address)
             if not contacts:
-                error = 'Failed to get contact recipients'
-                return self.abort_with_message(error, device=rd_mac_address)
+                data = {'contacts_exist': False}
+                return self.success_with_message(request.path, data=data)
 
-            return self.success_with_message(request.path, data=contacts)
+            data = {'contacts_exist': True, 'contacts': contacts}
+            return self.success_with_message(request.path, data=data)
 
-        @app.route('/system/add_new_device', methods=['POST'])
+        @self.app.route('/system/add_new_device', methods=['POST'])
         def add_new_device():
             """API route to add new mobile device and associated raspberry pi device to server
 
@@ -176,7 +178,7 @@ class RestAPI(object):
                 rd_mac_address: str
             """
             keys = ['md_mac_address', 'name', 'email', 'vehicle', 'rd_mac_address']
-            status, error = self.error_handling.check_system_request(request.json, keys, all_should_exists=True)
+            status, error = self.error_handling.check_system_request(request.json, keys, all_should_exist=True)
             if not status:
                 return self.abort_with_message(error)
 
@@ -201,9 +203,9 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/get_device_info', methods=['POST'])
-        def get_device_info():
-            """API route to get mobile device information
+        @self.app.route('/system/remove_device', methods=['POST'])
+        def remove_md_device():
+            """API route to remove modile device and raspberry pi device association on server
 
             required data:
                 md_mac_address: str
@@ -213,14 +215,22 @@ class RestAPI(object):
                 return self.abort_with_message(error)
 
             md_mac_address = request.json['md_mac_address']
-            info = self.database.get_mobile_device_information(md_mac_address)
-            if not info:
-                error = 'Error getting device information'
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                error = 'Error getting security system id'
+                return self.abort_with_message(error, md_mac_address)
+
+            if not self.database.remove_mobile_device(md_mac_address):
+                error = 'Error removing mobile device'
                 return self.abort_with_message(error, device=md_mac_address)
 
-            return self.success_with_message(request.path, data=info)
+            if not self.database.remove_raspberry_pi_device(rd_mac_address):
+                error = 'Error removing system from server'
+                return self.abort_with_message(error, device=rd_mac_address)
 
-        @app.route('/system/update_device_info', methods=['POST'])
+            return self.success_with_message(request.path)
+
+        @self.app.route('/system/update_device_info', methods=['POST'])
         def update_device_info():
             """API route to update mobile device information
 
@@ -232,9 +242,9 @@ class RestAPI(object):
                 vehicle: str
             """
             keys = ['md_mac_address', 'name', 'email', 'phone', 'vehicle']
-            status, error = self.error_handling.check_system_request(request.json, keys=keys, all_should_exists=True)
+            status, error = self.error_handling.check_system_request(request.json, keys=keys, all_should_exist=True)
             if not status:
-                self.abort_with_message(error)
+                return self.abort_with_message(error)
 
             md_mac_address = request.json['md_mac_address']
             name = request.json['name']
@@ -247,7 +257,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/get_md_device', methods=['POST'])
+        @self.app.route('/system/get_md_device', methods=['POST'])
         def get_device():
             """API route to check if mobile device exist
 
@@ -261,11 +271,22 @@ class RestAPI(object):
             md_mac_address = request.json['md_mac_address']
             if not self.database.get_mobile_device(md_mac_address):
                 _logger.debug('Mobile device [{0}] does not exist'.format(md_mac_address))
-                return jsonify({'code': _SUCCESS_CODE, 'data': False})
+                return jsonify({'code': _SUCCESS_CODE, 'data': {'device_exist': False}})
 
-            return self.success_with_message(request.path)
+            info = self.database.get_mobile_device_information(md_mac_address)
+            if not info:
+                error = 'Error getting device information'
+                return self.abort_with_message(error, device=md_mac_address)
 
-        @app.route('/system/get_rd_device', methods=['POST'])
+            rd_mac_address = self.database.get_raspberry_pi_device(md_mac_address)
+            if not rd_mac_address:
+                error = 'Error getting security client'
+                return self.abort_with_message(error, device=md_mac_address)
+
+            data = {'device_exist': True, 'info': info, 'rd_mac_address': rd_mac_address}
+            return self.success_with_message(request.path, data=data)
+
+        @self.app.route('/system/get_rd_device', methods=['POST'])
         def get_rd_device():
             """API route to check if mobile device exist
 
@@ -282,7 +303,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/arm', methods=['POST'])
+        @self.app.route('/system/arm', methods=['POST'])
         def arm_system():
             """API route to arm a security system
 
@@ -318,7 +339,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/disarm', methods=['POST'])
+        @self.app.route('/system/disarm', methods=['POST'])
         def disarm_system():
             """API route to disarm a security system
 
@@ -354,7 +375,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/logs', methods=['POST'])
+        @self.app.route('/system/logs', methods=['POST'])
         def get_logs():
             """API route to get logs for a security system
 
@@ -378,7 +399,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path, data=logs)
 
-        @app.route('/system/false_alarm', methods=['POST'])
+        @self.app.route('/system/false_alarm', methods=['POST'])
         def set_false_alarm():
             """API route to set security config as false alarm
 
@@ -413,7 +434,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/location', methods=["POST"])
+        @self.app.route('/system/location', methods=["POST"])
         def get_location_coordinates():
             """API route to get gps location coordinates of a raspberry pi system
 
@@ -442,7 +463,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path, data=data)
 
-        @app.route('/system/temperature', methods=["POST"])
+        @self.app.route('/system/temperature', methods=["POST"])
         def get_temperature():
             """API route to get gps location coordinates of a raspberry pi system
 
@@ -472,7 +493,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path, data=data)
 
-        @app.route('/system/speedometer', methods=["POST"])
+        @self.app.route('/system/speedometer', methods=["POST"])
         def get_speedometer_data():
             """API route to get speedometer data from a raspberry pi system
 
@@ -505,7 +526,7 @@ class RestAPI(object):
 
         #-------- API calls specifically from raspberry pi (security system) -----------
 
-        @app.route('/system/create_securityconfig', methods=['POST'])
+        @self.app.route('/system/create_securityconfig', methods=['POST'])
         def create_securityconfig():
             """API route to create new security config for raspberry pi device
 
@@ -523,7 +544,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/add_connection', methods=['POST'])
+        @self.app.route('/system/add_connection', methods=['POST'])
         def add_connection():
             """API route to add connection parameters for a raspberry pi device
 
@@ -546,7 +567,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/update_connection', methods=['POST'])
+        @self.app.route('/system/update_connection', methods=['POST'])
         def update_connection():
             """API route to update connection parameters for a raspberry pi device
 
@@ -569,7 +590,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/get_connection', methods=['POST'])
+        @self.app.route('/system/get_connection', methods=['POST'])
         def get_connection():
             """API route to check if connection exists in database
 
@@ -588,7 +609,7 @@ class RestAPI(object):
 
             return self.success_with_message(request.path)
 
-        @app.route('/system/set_breached', methods=['POST'])
+        @self.app.route('/system/set_breached', methods=['POST'])
         def set_system_breached():
             """API route to set system breached for particular system (SHOULD ONLY BE CALLED BY RPI)
 
@@ -611,7 +632,7 @@ class RestAPI(object):
 
             self.success_with_message(request.path)
 
-        @app.route('/system/panic', methods=['POST'])
+        @self.app.route('/system/panic', methods=['POST'])
         def panic_reponse():
             """API route to send panic response emails and text messages to contacts of specific system
 
@@ -659,7 +680,7 @@ class RestAPI(object):
         returns:
             jsonify({code, data, message})
         """
-        _logger.info('Aborting with error: [{0}] for device [{1}]'.format(message, device))
+        _logger.info('Aborting with error: [{0}] for device [{1}]'.format(error, device))
         return jsonify({'code': self._FAILURE_CODE, 'message': error})
 
     def success_with_message(self, path, data=True):
@@ -677,10 +698,18 @@ class RestAPI(object):
 
     def start(self):
         """method to start the flask server"""
-        app.run(host=self.host, port=self.port)
+        self.app.run(host=self.host, port=self.port)
 
     def save_settings(self):
         """saves settings before quiting program"""
         _logger.debug('Saving security session.')
         if self.dev:
             self.database.clear_all_tables()
+
+    def flask_app(self):
+        """method to get the flask app object
+
+        returns:
+            flask app()
+        """
+        return self.app

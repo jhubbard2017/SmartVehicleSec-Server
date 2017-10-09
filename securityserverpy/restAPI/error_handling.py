@@ -3,16 +3,13 @@
 # module for handling errors made during rest api calls from clients
 #
 
-from securityclientpy import _logger
+from securityserverpy import _logger
 
 
 class APIErrorHandling(object):
 
     _NO_DATA_MESSAGE = 'No data found in request'
     _EXPECTED_DATA_MISSING_MESSAGE = 'Expected data missing in request'
-
-    def __init__(self):
-        pass
 
     def _check_json(self, json, keys, all_should_exist):
         """checks if keys are located in a json object
@@ -32,11 +29,15 @@ class APIErrorHandling(object):
                 if not key in json:
                     return (False, self._EXPECTED_DATA_MISSING_MESSAGE)
         else:
+            one_expected_key_found = False
             for key in keys:
                 if key in json:
-                    return (True, None)
+                    one_expected_key_found = True
+                    break
+            if not one_expected_key_found:
+                return (False, self._EXPECTED_DATA_MISSING_MESSAGE)
 
-        return (False, self._EXPECTED_DATA_MISSING_MESSAGE)
+        return (True, None)
 
     def check_system_request(self, json, keys, all_should_exist=False):
         """checks the get security config request for errors

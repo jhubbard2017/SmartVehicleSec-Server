@@ -93,7 +93,10 @@ Each path includes a leading string of `http://{address}:{port}/path/to/route`
 
   - Required data: { md_mac_address : str, name : str, email : str, phone : str, vehicle : str, rd_mac_address : str }
   - Returns: { code : Int, data : bool }
-  
+- `/system/remove_device` : remove mobile device app client on the server
+
+  - Required data: { md_mac_address : str }
+  - Returns: { code : Int, data : bool }
 - `/system/get_device_info` : get mobile device information on the server
 
   - Required data: { md_mac_address : str }

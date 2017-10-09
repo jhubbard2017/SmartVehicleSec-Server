@@ -3,7 +3,7 @@
 # logic for establing server communication, processing data, and sending data to clients
 #
 
-from securityserverpy.Flask.restapi import RestAPI
+from securityserverpy.restAPI.restapi import RestAPI
 
 _SUCCESS_CODE = 201
 _FAILURE_CODE = 404
