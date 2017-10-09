@@ -330,9 +330,9 @@ class TestRestAPI_get_contacts(unittest.TestCase):
     def test_contacts_not_exist(self):
         self.restapi.database.add_raspberry_pi_device('md_test_device', 'rd_test_device')
         data = {'md_mac_address': 'md_test_device'}
-        expected_code = _FAILURE_CODE
-        expected_error = 'Failed to get contact recipients'
-        self.helper.get_contacts(data, expected_code, expected_error=expected_error)
+        expected_code = _SUCCESS_CODE
+        expected_data = {'contacts_exist': False}
+        self.helper.get_contacts(data, expected_code, expected_data=expected_data)
 
     def test_success(self):
         self.restapi.database.add_raspberry_pi_device('md_test_device', 'rd_test_device')
@@ -466,42 +466,6 @@ class TestRestAPI_remove_md_device(unittest.TestCase):
         self.helper.remove_device(data, expected_code, expected_data=expected_data)
 
 
-class TestRestAPI_get_device_info(unittest.TestCase):
-    """class for testing update_contacts in RestAPI"""
-
-    def setUp(self):
-        self.restapi = RestAPI('127.0.0.1', 3001, testing=True, dev=False)
-        self.restapi.database = DatabaseMock()
-        app = self.restapi.flask_app().test_client()
-        self.helper = RestAPITestHelper(app, tester=self)
-
-    def tearDown(self):
-        self.restapi.database.clear_all_tables()
-
-    def test_no_data(self):
-        data = {}
-        expected_code = _FAILURE_CODE
-        self.helper.get_device_info(data, expected_code, expected_error=_NO_DATA_MESSAGE)
-
-    def test_wrong_data(self):
-        data = {'hello': 'world'}
-        expected_code = _FAILURE_CODE
-        self.helper.get_device_info(data, expected_code, expected_error=_EXPECTED_DATA_MISSING_MESSAGE)
-
-    def test_error_getting_device_information(self):
-        data = {'md_mac_address': 'world'}
-        expected_code = _FAILURE_CODE
-        expected_error = 'Error getting device information'
-        self.helper.get_device_info(data, expected_code, expected_error=expected_error)
-
-    def test_success(self):
-        self.restapi.database.add_mobile_device('md_test_device', 'n1', 'e1', 'p1', 'v1')
-        data = {'md_mac_address': 'md_test_device'}
-        expected_code = _SUCCESS_CODE
-        expected_data = {'name': 'n1', 'email': 'e1', 'phone': 'p1', 'vehicle': 'v1'}
-        self.helper.get_device_info(data, expected_code, expected_data=expected_data)
-
-
 class TestRestAPI_update_device_info(unittest.TestCase):
     """class for testing update_contacts in RestAPI"""
 
@@ -523,6 +487,35 @@ class TestRestAPI_update_device_info(unittest.TestCase):
         data = {'hello': 'world'}
         expected_code = _FAILURE_CODE
         self.helper.update_device_info(data, expected_code, expected_error=_EXPECTED_DATA_MISSING_MESSAGE)
+
+    def test_database_error(self):
+        data = {
+            'md_mac_address': 'foo',
+            'name': 'name1',
+            'email': 'email2',
+            'phone': 'phone2',
+            'vehicle': 'c2'
+        }
+        expected_code = _FAILURE_CODE
+        expected_error = 'Failed to update device information'
+        self.helper.update_device_info(data, expected_code, expected_error=expected_error)
+
+    def test_success(self):
+        self.restapi.database.add_mobile_device('md_test_device', 'n1', 'e1', 'p1', 'v1')
+        data = {
+            'md_mac_address': 'md_test_device',
+            'name': 'name1',
+            'email': 'email2',
+            'phone': 'phone2',
+            'vehicle': 'c2'
+        }
+        expected_code = _SUCCESS_CODE
+        expected_data = True
+        self.helper.update_device_info(data, expected_code, expected_data=expected_data)
+
+        del data['md_mac_address']
+        saved_data = self.restapi.database.get_mobile_device_information('md_test_device')
+        self.assertEqual(saved_data, data)
 
 
 class TestRestAPI_get_device(unittest.TestCase):
