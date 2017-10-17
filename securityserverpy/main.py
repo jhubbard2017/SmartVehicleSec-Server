@@ -25,9 +25,6 @@ def _config_from_args():
 
     optional_argument_group = parser.add_argument_group('optional arguments')
     optional_argument_group.add_argument(
-        '-p', '--port', dest='port', default=None, required=True,
-        help='Port number used for clients to access server. ')
-    optional_argument_group.add_argument(
         '-d', '--dev', dest='dev', action='store_true', default=False, required=False,
         help='Will clear databases after ending session.')
 
@@ -36,7 +33,7 @@ def _config_from_args():
 # Make global so can be accessed when needed to stop system, and safely save settings
 config = _config_from_args()
 host = socket.gethostbyname(socket.gethostname())
-port = int(config.port)
+port = 3001
 server = Server(host=host, port=port, dev=config.dev)
 
 def main_thread():

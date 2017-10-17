@@ -16,71 +16,73 @@ class Systems(object):
     def __init__(self):
         self.client_requests = ClientRequests()
 
-    @app.route('{0}/temperature'.format(_ROOT_PATH), methods=['POST'])
-    def temperature(self):
-        """get temperature data for system
+        # Use inner methods so self pointer can be accessed
 
-        required data:
-            email: str
-        """
-        required_data_keys = ['email']
-        status, error = verify(request.json, keys=required_data_keys, all_should_exist=True)
-        if not status: return error_response(error)
+        @app.route('{0}/temperature'.format(self._ROOT_PATH), methods=['POST'])
+        def temperature():
+            """get temperature data for system
 
-        user = database.get_user(request.json['email'])
-        if not user: return error_response('User does not exist')
-        if not user['logged_in']: return error_response('User not authenticated')
+            required data:
+                email: str
+            """
+            required_data_keys = ['email']
+            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
+            if not status: return error_response(error)
 
-        connection = database.get_connection(user['system_id'])
-        if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
+            user = database.get_user(request.json['email'])
+            if not user: return error_response('User does not exist')
+            if not user['logged_in']: return error_response('User not authenticated')
 
-        data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='temperature')
-        if not data: return error_response('Unable to complete system request')
+            connection = database.get_connection(user['system_id'])
+            if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-        return success_response(request.path, data=data)
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='temperature')
+            if not data: return error_response('Unable to complete system request')
 
-    @app.route('{0}/speedometer'.format(_ROOT_PATH), methods=['POST'])
-    def speedometer(self):
-        """get speedometer data for system
+            return success_response(request.path, data=data)
 
-        required data:
-            email: str
-        """
-        required_data_keys = ['email']
-        status, error = verify(request.json, keys=required_data_keys, all_should_exist=True)
-        if not status: return error_response(error)
+        @app.route('{0}/speedometer'.format(self._ROOT_PATH), methods=['POST'])
+        def speedometer():
+            """get speedometer data for system
 
-        user = database.get_user(request.json['email'])
-        if not user: return error_response('User does not exist')
-        if not user['logged_in']: return error_response('User not authenticated')
+            required data:
+                email: str
+            """
+            required_data_keys = ['email']
+            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
+            if not status: return error_response(error)
 
-        connection = database.get_connection(user['system_id'])
-        if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
+            user = database.get_user(request.json['email'])
+            if not user: return error_response('User does not exist')
+            if not user['logged_in']: return error_response('User not authenticated')
 
-        data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='speedometer')
-        if not data: return error_response('Unable to complete system request')
+            connection = database.get_connection(user['system_id'])
+            if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-        return success_response(request.path, data=data)
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='speedometer')
+            if not data: return error_response('Unable to complete system request')
 
-    @app.route('{0}/location'.format(_ROOT_PATH), methods=['POST'])
-    def location(self):
-        """get location data for system
+            return success_response(request.path, data=data)
 
-        required data:
-            email: str
-        """
-        required_data_keys = ['email']
-        status, error = verify(request.json, keys=required_data_keys, all_should_exist=True)
-        if not status: return error_response(error)
+        @app.route('{0}/location'.format(self._ROOT_PATH), methods=['POST'])
+        def location():
+            """get location data for system
 
-        user = database.get_user(request.json['email'])
-        if not user: return error_response('User does not exist')
-        if not user['logged_in']: return error_response('User not authenticated')
+            required data:
+                email: str
+            """
+            required_data_keys = ['email']
+            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
+            if not status: return error_response(error)
 
-        connection = database.get_connection(user['system_id'])
-        if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
+            user = database.get_user(request.json['email'])
+            if not user: return error_response('User does not exist')
+            if not user['logged_in']: return error_response('User not authenticated')
 
-        data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='location')
-        if not data: return error_response('Unable to complete system request')
+            connection = database.get_connection(user['system_id'])
+            if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-        return success_response(request.path, data=data)
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='location')
+            if not data: return error_response('Unable to complete system request')
+
+            return success_response(request.path, data=data)

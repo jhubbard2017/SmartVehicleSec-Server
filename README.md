@@ -5,7 +5,7 @@ Python server software for the Smart Vehicle Security System.
 ### Running on local machine
 - this example assumes a python virtual env has already been established - see details on virtual env
 ```shell
-(venv-securityserverpy) $ securityserverpy -p port 
+(venv-securityserverpy) $ securityserverpy 
 ```
 - the required arguments are the ip address and port number. These two need to be specified to start the program.
 - When in development mode, use the `-d` argument so the database tables can be cleared after stopping the server.
@@ -54,7 +54,7 @@ This assumes you are in the virtual environment `venv-securityserverpy`. See det
 
 # FLASK
 The server uses a REST API for system access via a client mobile app or raspberry pi client.
-Each path includes a leading string of `http://{localhost}:{port}/path/to/route`
+Each path includes a leading string of `http://{localhost}:3001/path/to/route`
 
 ## Routes
 Below is a list of routes available via API calls on the server. 
