@@ -14,7 +14,7 @@ class ClientRequests(object):
     _SUCCESS_CODE = 201
     _FAILURE_CODE = 404
 
-    def request(self, host, port, path, rd_mac_address, data={}):
+    def request(self, host, port, path, system_id, data={}):
         """Sends http request to ip address and port connection
 
         args:
@@ -28,7 +28,7 @@ class ClientRequests(object):
             json {}
         """
         url = 'http://{0}:{1}/system/{2}'.format(host, port, path)
-        request_data = {'rd_mac_address': rd_mac_address}
+        request_data = {'system_id': system_id}
         for key, value in data.iteritems():
             request_data[key] = value
         response = requests.post(url, json=request_data)
@@ -37,114 +37,22 @@ class ClientRequests(object):
 
         return response.json()
 
-    def arm(self, host, port, rd_mac_address):
-        """arms a security system at a specific host and port
-
-        args:
-            host: str
-            port: str
-            rd_mac_address: str
-
-        returns:
-            bool
-        """
-        path = 'arm'
-        response = self.request(host, port, path, rd_mac_address)
-        if not response or response['code'] == self._FAILURE_CODE:
-            return False
-
-        return True
-
-    def disarm(self, host, port, rd_mac_address):
-        """disarms a security system at a specific host and port
-
-        args:
-            host: str
-            port: str
-            rd_mac_address: str
-
-        returns:
-            bool
-        """
-        path = 'disarm'
-        response = self.request(host, port, path, rd_mac_address)
-        if not response or response['code'] == self._FAILURE_CODE:
-            return False
-
-        return True
-
-    def false_alarm(self, host, port, rd_mac_address):
-        """sets security breach as false alarm at a specific host and port
-
-        args:
-            host: str
-            port: str
-            rd_mac_address: str
-
-        returns:
-            bool
-        """
-        path = 'false_alarm'
-        response = self.request(host, port, path, rd_mac_address)
-        if not response or response['code'] == self._FAILURE_CODE:
-            return False
-
-        return True
-
-    def location(self, host, port, rd_mac_address):
-        """gets gps coordinates at a specific host and port
-
-        args:
-            host: str
-            port: str
-            rd_mac_address: str
-
-        returns:
-            {}
-        """
-        path = 'location'
-        response = self.request(host, port, path, rd_mac_address)
-        if not response or response['code'] == self._FAILURE_CODE:
-            return False
-
-        return response['data']
-
-    def get_data(self, host, port, rd_mac_address, path=None):
+    def make_request(self, host, port, system_id, path=None):
         """gets certain type of data from specific host and port
 
         args:
             host: str
             port: str
             rd_mac_address: str
-            type: str
+            path: str
 
         returns:
             {}
         """
         if not path:
             return None
-        response = self.request(host, port, path, rd_mac_address)
+        response = self.request(host, port, path, system_id)
         if not response or response['code'] == self._FAILURE_CODE:
             return False
 
         return response['data']
-
-
-    def temperature(self, host, port, rd_mac_address):
-        """gets temperature data at a specific host and port
-
-        args:
-            host: str
-            port: str
-            rd_mac_address: str
-
-        returns:
-            bool
-        """
-        path = 'temperature'
-        response = self.request(host, port, path, rd_mac_address)
-        if not response or response['code'] == self._FAILURE_CODE:
-            return False
-
-        return response['data']
-

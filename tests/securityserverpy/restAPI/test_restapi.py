@@ -6,7 +6,7 @@
 import unittest
 import json
 
-from securityserverpy.restAPI.restapi import RestAPI
+from securityserverpy.flask.restapi import RestAPI
 from tests.mocks.database_mock import DatabaseMock
 
 

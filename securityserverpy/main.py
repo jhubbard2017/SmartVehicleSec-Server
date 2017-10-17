@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 #
-# main file: smart vehicle security server
+# main module
 #
 
 import os
 from argparse import ArgumentParser
 from threading import Thread
 import sys
+import socket
 
 from securityserverpy import _logger
 from securityserverpy.version import __version__
-from securityserverpy.securityserver import SecurityServer
+from securityserverpy.server import Server
 
 
 def _config_from_args():
@@ -24,25 +25,23 @@ def _config_from_args():
 
     optional_argument_group = parser.add_argument_group('optional arguments')
     optional_argument_group.add_argument(
-        '-i', '--host', dest='host', default=None, required=True,
-        help='ip address used for clients to access server. ')
-    optional_argument_group.add_argument(
         '-p', '--port', dest='port', default=None, required=True,
         help='Port number used for clients to access server. ')
     optional_argument_group.add_argument(
         '-d', '--dev', dest='dev', action='store_true', default=False, required=False,
-        help='Will clear databases after closing server session.')
+        help='Will clear databases after ending session.')
 
     return parser.parse_args()
 
-# Make global so can be accessed when need to stop system, and safely save settings
+# Make global so can be accessed when needed to stop system, and safely save settings
 config = _config_from_args()
+host = socket.gethostbyname(socket.gethostname())
 port = int(config.port)
-sec_server = SecurityServer(host=config.host, port=port, dev=config.dev)
+server = Server(host=host, port=port, dev=config.dev)
 
 def main_thread():
     """main thread to start up the server"""
-    sec_server.start()
+    server.start()
 
 def main():
     """ main function
@@ -57,7 +56,7 @@ def main():
         text = raw_input()
         if text == "stop":
             _logger.info("Shutting down. Saving settings.")
-            sec_server.save_settings()
+            server.save_settings()
             sys.exit(0)
 
 if __name__ == '__main__':

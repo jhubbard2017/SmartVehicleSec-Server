@@ -5,7 +5,7 @@ Python server software for the Smart Vehicle Security System.
 ### Running on local machine
 - this example assumes a python virtual env has already been established - see details on virtual env
 ```shell
-(venv-securityserverpy) $ securityserverpy -i ip_address -p port 
+(venv-securityserverpy) $ securityserverpy -p port 
 ```
 - the required arguments are the ip address and port number. These two need to be specified to start the program.
 - When in development mode, use the `-d` argument so the database tables can be cleared after stopping the server.
@@ -49,104 +49,65 @@ $ psql -d smartVSecDatabase -h localhost
 - Once you have successfully set up the database, you can use the `create_tables.py` file to set up the tables in the database.
 This assumes you are in the virtual environment `venv-securityserverpy`. See details above.
 ```shell
-(venv-securityserverpy) $ python securityserverpy/Database/create_tables.py
+(venv-securityserverpy) $ python securityserverpy/database/create_tables.py
 ```
 
-# REST API
-The server uses a REST API for system access via a client mobile app or raspberry pi client. Below are the API calls available and the required data for success responses.
-Each path includes a leading string of `http://{address}:{port}/path/to/route`
+# FLASK
+The server uses a REST API for system access via a client mobile app or raspberry pi client.
+Each path includes a leading string of `http://{localhost}:{port}/path/to/route`
 
-### Mobile app API calls:
-- `/system/arm` : arm the associated vehicle security system
+## Routes
+Below is a list of routes available via API calls on the server. 
+See code for details concerning required data for each route.
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/disarm` : disarm the associated vehicle security system
+#### Authentication
+- Root path: `/authentication`
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/security_config` : get the current security config of the system
+  - `/login`: used to log in a user
+  - `/logout`: log out a user
+  - `/forgot_password`: sends email with new password
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : { system_armed : bool, system_breached : bool } }
-- `/system/get_md_device`: checks if mobile device already exist or not
+#### Users
+- Root path: `/users`
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/get_rd_device`: checks if security system already exist for certain mobile device
+  - `/add`: adds a user
+  - `/get`: gets a user
+  - `/remove`: removes a user
+  - `/update`: updates a user
+  - `/change_password`: updates a user password
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/add_contacts` : add security contacts for a specific mobile client
+#### Emergency Contacts
+- Root path: `/emergency_contacts`
 
-  - Required data: { md_mac_address : str, contacts : [ { name, email, phone : str } ] }
-  - Returns: { code : Int, data : bool }
-- `/system/update_contacts` : update security contacts for a specific mobile client
+  - `/add`: adds list of contacts for user
+  - `/get`: gets list of contacts for user
+  - `/update`: updates contacts for user
 
-  - Required data: { md_mac_address : str, contacts : [ { name, email, phone : str } ] }
-  - Returns: { code : Int, data : bool }
-- `/system/get_contacts`: gets emergency contacts for a specific mobile device
+#### Security
+- Root path: `/security`
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : [{ name, email, phone : str }] }
-- `/system/add_new_device` : setup new mobile app client on the server
+  - `/get_config`: get security config for system
+  - `/add_config`: add security config for system
+  - `/arm`: arm system
+  - `/disarm`: disarm system
+  - `/false_alarm`: set system breach as false alarm
+  - `/panic`: send panic email to emergency contacts
+  - `/set_breach`: set system as breach
+  - `/get_logs`: get logs for system
 
-  - Required data: { md_mac_address : str, name : str, email : str, phone : str, vehicle : str, rd_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/remove_device` : remove mobile device app client on the server
+#### Connections
+- Root path: `/connections`
 
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/get_device_info` : get mobile device information on the server
+  - `/add`: add connection for system
+  - `/get`: get connection for system
+  - `/update`: update connection for system
 
-  - Required data: { md_mac_address : str }
-  - Returns : { code : int, data : { name : str, email : str, phone : str, vehicle : str } }
-- `/system/update_device_info` : update device information for specific device
+#### Systems
+- Root path: `/systems`
 
-  - Required data: { md_mac_address : str, name (optional) : str, email (optional) : str, phone (optional) : str, vehicle (optional) : str }
-  - Returns : { code : int, data : bool }
-- `/system/logs` : get list of logs for a specific client
-
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : [ { info: str, time : str, date : str } ] }
-- `/system/false_alarm` : set a security breach as a false alarm
-
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : bool }
-- `/system/location` : get gps location of a specific vehicle client
-
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : { longitude : float, latitude : float } }
-- `/system/temperature` : get temperature data of a specific vehicle client
-
-  - Required data: { md_mac_address : str }
-  - Returns: { code : Int, data : { fahrenheit : float, celcius : float } }
-- `/system/speedometer` : gets speedometer data of a specific vehicle client
-
-  - Required dataL { md_mac_address : str }
-  - Returns: { code : Int, data : { speed : str, altitude : str, heading : str, climb : str } }
-
-### Security client API calls:
-- `/system/add_connection` : add a new security client connection to the server
-  
-  - Required data: { rd_mac_address : str, ip_address: str, port: int }
-- `/system/update_connection` : update existing security client connection on the server
-
-  - Required data: { rd_mac_address : str, ip_address : str, port : int }
-- `/system/get_connection` : get an existing security client from the server
-
-  - Required data: { rd_mac_address : str }
-- `/system/set_breached` : set specific system as security breach
-
-  - Required data: { rd_mac_address : str }
-- `/system/panic` : set panic response for specific security system
-
-  - Required data: { rd_mac_address : str }
-  
-### Error handling:
-- When error has occurred on server, the following json response is returned:
-
-  - { code : int, data : false, message : str }
+  - `/temperature`: get temperature data for system
+  - `/speedometer`: get speedometer data for system
+  - `/location`: get location data for system
 
 # Python Details
 ## first time python setup
@@ -199,10 +160,6 @@ $ securityserverpy
 There is a single definition of the package version in `securityserver/version.py`. Updating there changes the package version.
 
 # Testing
-
-## specifying yaml files
-- There are a group of yaml testing files in `tests/data`. If you need to add a yaml config file, you can store it in this location.
-- To ensure the automated tests run smoothly and do not create any pollution, make sure you clear the associated yaml config file before and after tests.
 
 ## running automated tests
 - Test are organized using the `unittest` framework provided by python. To setup tests and successfully close them, use the `setUp` and `tearDown` methods

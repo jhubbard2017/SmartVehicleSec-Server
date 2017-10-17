@@ -33,40 +33,37 @@ def _get_database_info(filename, section='postgresql'):
     return db
 
 def create_tables():
-
     """ create tables in the PostgreSQL database"""
     commands = (
         """
-        CREATE TABLE mdevices (
-            md_mac_address VARCHAR(255) PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            email VARCHAR(255) NOT NULL,
+        CREATE TABLE users (
+            email VARCHAR(255) PRIMARY KEY,
+            password VARCHAR(255) NOT NULL,
+            firstname VARCHAR(255) NOT NULL,
+            lastname VARCHAR(255) NOT NULL,
             phone VARCHAR(255) NOT NULL,
-            vehicle VARCHAR(255) NOT NULL
+            vehicle VARCHAR(255) NOT NULL,
+            system_id VARCHAR(255) NOT NULL,
+            logged_in BOOLEAN NOT NULL
         )
-        """,
-        """ CREATE TABLE rdevices (
-                md_mac_address VARCHAR(255) PRIMARY KEY,
-                rd_mac_address VARCHAR(255) NOT NULL
-                )
         """,
         """
         CREATE TABLE connections (
-                rd_mac_address VARCHAR(255) PRIMARY KEY,
-                ip_address VARCHAR(255) NOT NULL,
+                system_id VARCHAR(255) PRIMARY KEY,
+                host VARCHAR(255) NOT NULL,
                 port INT NOT NULL
         )
         """,
         """
         CREATE TABLE securityconfig (
-                rd_mac_address VARCHAR(255) PRIMARY KEY,
+                system_id VARCHAR(255) PRIMARY KEY,
                 system_armed BOOLEAN NOT NULL,
                 system_breached BOOLEAN NOT NULL
         )
         """,
         """
         CREATE TABLE logs (
-                rd_mac_address VARCHAR(255),
+                system_id VARCHAR(255) NOT NULL,
                 info VARCHAR(255) NOT NULL,
                 date VARCHAR(255) NOT NULL,
                 time VARCHAR(255) NOT NULL
@@ -74,7 +71,7 @@ def create_tables():
         """,
         """
         CREATE TABLE contacts (
-                rd_mac_address VARCHAR(255),
+                system_id VARCHAR(255) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL,
                 phone VARCHAR(255) NOT NULL

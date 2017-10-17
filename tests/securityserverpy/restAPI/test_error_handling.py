@@ -5,7 +5,7 @@
 
 import unittest
 
-from securityserverpy.restAPI.error_handling import APIErrorHandling
+from securityserverpy.flask.error_handling import APIErrorHandling
 
 _NO_DATA_MESSAGE = 'No data found in request'
 _EXPECTED_DATA_MISSING_MESSAGE = 'Expected data missing in request'

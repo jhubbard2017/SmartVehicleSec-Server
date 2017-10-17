@@ -1,8 +1,6 @@
 --extra-index-url https://pypi.python.org/pypi
 xmltodict
 requests
-PyYAML
-opencv-python
 imutils
 flask
 psycopg2

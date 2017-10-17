@@ -5,7 +5,6 @@
 
 import os
 import os.path
-import yaml
 import smtplib
 
 from email.mime.multipart import MIMEMultipart

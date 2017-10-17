@@ -14,7 +14,11 @@ setup(
     setup_requires='setuptools',
     install_requires=[
         'xmltodict',
-        'PyYAML'
+        'requests',
+        'imutils',
+        'flask',
+        'psycopg2',
+        'configparser'
     ],
     entry_points={
         'console_scripts': [
