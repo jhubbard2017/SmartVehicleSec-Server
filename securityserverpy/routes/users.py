@@ -12,7 +12,11 @@ class Users(object):
 
     _ROOT_PATH = '/users'
 
-    def __init__(self):
+    def __init__(self, testing=False):
+        self.database = None
+        if not testing:
+            self.database = database
+
         # Use inner methods so self pointer can be accessed
 
         @app.route('{0}/add'.format(self._ROOT_PATH), methods=['POST'])
@@ -33,11 +37,11 @@ class Users(object):
             if not status: return error_response(error)
 
             # Check if user exists and password is correct
-            user = database.verify_user(request.json['email'], request.json['password'])
+            user = self.database.verify_user(request.json['email'], request.json['password'])
             if user: return error_response('User already exist')
 
             # Add user
-            if not database.add_user(
+            if not self.database.add_user(
                     request.json['email'], request.json['password'], request.json['firstname'],
                     request.json['lastname'], request.json['phone'], request.json['vehicle'], request.json['system_id']
             ):
@@ -56,7 +60,7 @@ class Users(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
@@ -74,11 +78,11 @@ class Users(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
-            if not database.remove_user(request.json['email']):
+            if not self.database.remove_user(request.json['email']):
                 return error_response('Unable to remove user')
 
             return success_response(request.path)
@@ -99,11 +103,11 @@ class Users(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
-            if not database.update_user(
+            if not self.database.update_user(
                     request.json['email'], firstname=request.json['firstname'], lastname=request.json['lastname'],
                     phone=request.json['phone'], vehicle=request.json['vehicle'], system_id=request.json['system_id']
             ):
@@ -125,12 +129,12 @@ class Users(object):
             if not status: return error_response(error)
 
             # Check if user exists and password is correct
-            user = database.verify_user(request.json['email'], request.json['old_password'])
-            if not user: return error_response('USer does not exist')
+            user = self.database.verify_user(request.json['email'], request.json['old_password'])
+            if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
             # Update user password
-            if not database.update_user(request.json['email'], password=request.json['new_password']):
+            if not self.database.update_user(request.json['email'], password=request.json['new_password']):
                 return error_response('Unable to update password')
 
             return success_response(request.path)

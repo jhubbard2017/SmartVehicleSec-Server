@@ -12,7 +12,10 @@ class Authentication(object):
 
     _ROOT_PATH = '/authentication'
 
-    def __init__(self):
+    def __init__(self, testing=False):
+        self.database = None
+        if not testing:
+            self.database = database
 
         # Use inner methods so self pointer can be accessed
 
@@ -29,14 +32,14 @@ class Authentication(object):
             if not status: return error_response(error)
 
             # Check if user exists and password is correct
-            user = database.verify_user(request.json['email'], request.json['password'])
+            user = self.database.verify_user(request.json['email'], request.json['password'])
             if not user: return error_response('User does not exist')
 
             # Check if user is already logged in
             if user['logged_in']: return error_response('User already logged in')
 
             # Update auth status for user
-            if not database.update_user(request.json['email'], logged_in=True):
+            if not self.database.update_user(request.json['email'], logged_in=True):
                 return error_response('Failure logging in user')
 
             return success_response(request.path)
@@ -53,14 +56,14 @@ class Authentication(object):
             if not status: return error_response(error)
 
             # Check if user exists and password is correct
-            user = database.verify_user(request.json['email'], request.json['password'])
+            user = self.database.verify_user(request.json['email'], request.json['password'])
             if not user: return error_response('User does not exist')
 
             # Check if user is already logged out
             if not user['logged_in']: return error_response('User not logged in')
 
             # Update auth status for user
-            if not database.update_user(request.json['email'], logged_in=False):
+            if not self.database.update_user(request.json['email'], logged_in=False):
                 return error_response('Failure logging out user')
 
             return success_response(request.path)

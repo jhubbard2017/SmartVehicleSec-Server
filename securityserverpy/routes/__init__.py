@@ -55,12 +55,12 @@ def verify_request(json, keys, all_should_exist):
         bool, str
     """
     if not json:
-        return (False, self._NO_DATA_MESSAGE)
+        return (False, _NO_DATA_MESSAGE)
 
     if all_should_exist:
         for key in keys:
             if not key in json:
-                return (False, self._EXPECTED_DATA_MISSING_MESSAGE)
+                return (False, _EXPECTED_DATA_MISSING_MESSAGE)
     else:
         one_expected_key_found = False
         for key in keys:
@@ -68,6 +68,6 @@ def verify_request(json, keys, all_should_exist):
                 one_expected_key_found = True
                 break
         if not one_expected_key_found:
-            return (False, self._EXPECTED_DATA_MISSING_MESSAGE)
+            return (False, _EXPECTED_DATA_MISSING_MESSAGE)
 
     return (True, None)
