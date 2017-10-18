@@ -12,7 +12,11 @@ class EmergencyContacts(object):
 
     _ROOT_PATH = '/emergency_contacts'
 
-    def __init__(self):
+    def __init__(self, testing=False):
+        self.database = None
+        if not testing:
+            self.database = database
+
         # Use inner methods so self pointer can be accessed
 
         @app.route('{0}/add'.format(self._ROOT_PATH), methods=['POST'])
@@ -28,14 +32,14 @@ class EmergencyContacts(object):
             if not status: return error_response(error)
 
             # Check if user exists and authenticated
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
             for contact in request.json['contacts']:
                 if not 'name' in contact and not 'email' in contact and not 'phone' in contact:
                     return error_response('Required data missing in contacts list')
-                if not database.add_contact(user['system_id'], contact['name'], contact['email'], contact['phone']):
+                if not self.database.add_contact(user['system_id'], contact['name'], contact['email'], contact['phone']):
                     return error_response('Unable to add contacts')
 
             return success_response(request.path)
@@ -52,11 +56,11 @@ class EmergencyContacts(object):
             if not status: return error_response(error)
 
             # Check if user exists and authenticated
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
-            contacts = database.get_contacts(user['system_id'])
+            contacts = self.database.get_contacts(user['system_id'])
             if not contacts: return error_response('Unable to get contacts for user')
 
             return success_response(request.path, data=contacts)
@@ -74,17 +78,17 @@ class EmergencyContacts(object):
             if not status: return error_response(error)
 
             # Check if user exists and authenticated
-            user = database.get_user(request.json['email'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
-            if not database.remove_all_contacts(user['system_id']):
+            if not self.database.remove_all_contacts(user['system_id']):
                 return error_response('Failure while updating contacts')
 
             for contact in request.json['contacts']:
                 if not 'name' in contact and not 'email' in contact and not 'phone' in contact:
                     return error_response('Required data missing in contacts list')
-                if not database.add_contact(user['system_id'], contact['name'], contact['email'], contact['phone']):
+                if not self.database.add_contact(user['system_id'], contact['name'], contact['email'], contact['phone']):
                     return error_response('Unable to update contacts')
 
             return success_response(request.path)

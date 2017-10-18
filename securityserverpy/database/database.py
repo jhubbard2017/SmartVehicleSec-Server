@@ -358,43 +358,6 @@ class Database(object):
         values = (system_id, name, email, phone)
         return self._commit_sql(sql, values)
 
-    def update_contact(self, system_id, name, email=None, phone=None):
-        """update contact on database for user/system
-
-        args:
-            system_id: str
-            name: str
-            email: str (Default=None)
-            phone: str (Default=None)
-
-        returns:
-            bool
-        """
-        all_success = True
-        if email:
-            sql = 'UPDATE contacts SET email = %s WHERE name = %s AND system_id = %s;'
-            values = (email, name, system_id)
-            all_success = all_success and self._commit_sql(sql, values)
-        if phone:
-            sql = 'UPDATE contacts SET phone = %s WHERE name = %s AND system_id = %s;'
-            values = (phone, name, system_id)
-            all_success = all_success and self._commit_sql(sql, values)
-        return all_success
-
-    def remove_contact(self, system_id, name):
-        """remove contact from database for user/system
-
-        args:
-            system_id: str
-            name: str
-
-        returns:
-            bool
-        """
-        sql = 'DELETE FROM contacts WHERE system_id = %s AND name = %s;'
-        values = (system_id, name)
-        return self._commit_sql(sql, values)
-
     def remove_all_contacts(self, system_id):
         """remove all contacts from database for user/system
 

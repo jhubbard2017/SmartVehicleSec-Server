@@ -67,76 +67,54 @@ class DatabaseMock(object):
             if user['system_id'] == system_id:
                 return user
         return None
-    #
-    # def add_raspberry_pi_connection(self, rd_mac_address, ip_address, port):
-    #     if rd_mac_address in self.connections:
-    #         return False
-    #     self.connections[rd_mac_address] = {'ip_address': ip_address, 'port': port}
-    #     return True
-    #
-    # def update_raspberry_pi_connection(self, rd_mac_address, ip_address=None, port=None):
-    #     if not rd_mac_address in self.connections:
-    #         return False
-    #     if ip_address:
-    #         self.connections[rd_mac_address]['ip_address'] = ip_address
-    #     if port:
-    #         self.connections[rd_mac_address]['port'] = port
-    #     return True
-    #
-    # def get_raspberry_pi_connection(self, rd_mac_address):
-    #     if not rd_mac_address in self.connections:
-    #         return None
-    #     return self.connections[rd_mac_address]
-    #
-    # def remove_raspberry_pi_connection(self, rd_mac_address):
-    #     if not rd_mac_address in self.connections:
-    #         return False
-    #     del self.connections[rd_mac_address]
-    #     return True
-    #
-    # def add_contact(self, rd_mac_address, name, email, phone):
-    #     if self.side_effect:
-    #         self.side_effect = False
-    #         return False
-    #     if not rd_mac_address in self.contacts:
-    #         self.contacts[rd_mac_address] = {name: {'email': email, 'phone': phone}}
-    #     else:
-    #         self.contacts[rd_mac_address].update({name: {'email': email, 'phone': phone}})
-    #     return True
-    #
-    # def update_contact(self, rd_mac_address, name, email=None, phone=None):
-    #     if not rd_mac_address in self.contacts:
-    #         return False
-    #     if not name in self.contacts[rd_mac_address]:
-    #         return False
-    #     if email:
-    #         self.contacts[rd_mac_address][name]['email'] = email
-    #     if phone:
-    #         self.contacts[rd_mac_address][name]['phone'] = phone
-    #     return True
-    #
-    # def remove_contact(self, rd_mac_address, name):
-    #     if not rd_mac_address in self.contacts:
-    #         return False
-    #     if not name in self.contacts[rd_mac_address]:
-    #         return False
-    #     del self.contacts[rd_mac_address][name]
-    #     return True
-    #
-    # def remove_all_contacts(self, rd_mac_address):
-    #     if not rd_mac_address in self.contacts:
-    #         return False
-    #     del self.contacts[rd_mac_address]
-    #     return True
-    #
-    # def get_contacts(self, rd_mac_address):
-    #     if not rd_mac_address in self.contacts:
-    #         return None
-    #     contacts = []
-    #     for name, contact in self.contacts[rd_mac_address].iteritems():
-    #         contacts.append({'name': name, 'email': contact['email'], 'phone': contact['phone']})
-    #     return contacts
-    #
+
+    def add_connection(self, system_id, host, port):
+        if system_id in self.connections:
+            return False
+        self.connections[system_id] = {'host': host, 'port': port}
+        return True
+
+    def update_connection(self, system_id, host=None, port=None):
+        if not system_id in self.connections:
+            return False
+        if host:
+            self.connections[system_id]['host'] = host
+        if port:
+            self.connections[system_id]['port'] = port
+        return True
+
+    def get_connection(self, system_id):
+        if not system_id in self.connections:
+            return None
+        return self.connections[system_id]
+
+    def remove_connection(self, system_id):
+        if not system_id in self.connections:
+            return False
+        del self.connections[system_id]
+        return True
+
+    def add_contact(self, system_id, name, email, phone):
+        if not system_id in self.contacts:
+            self.contacts[system_id] = {name: {'email': email, 'phone': phone}}
+        else:
+            self.contacts[system_id].update({name: {'email': email, 'phone': phone}})
+        return True
+
+    def remove_all_contacts(self, system_id):
+        if not system_id in self.contacts:
+            return False
+        del self.contacts[system_id]
+        return True
+
+    def get_contacts(self, system_id):
+        if not system_id in self.contacts:
+            return None
+        contacts = []
+        for name, contact in self.contacts[system_id].iteritems():
+            contacts.append({'name': name, 'email': contact['email'], 'phone': contact['phone']})
+        return contacts
+
     # def add_log(self, rd_mac_address, info):
     #     current_date = datetime.datetime.now()
     #     date = '{:%b %d, %Y}'.format(current_date)

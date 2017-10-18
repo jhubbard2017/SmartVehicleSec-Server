@@ -5,7 +5,6 @@
 
 import unittest
 import json
-from mock import Mock
 
 from securityserverpy.routes.users import Users
 from tests.mocks.database_mock import DatabaseMock

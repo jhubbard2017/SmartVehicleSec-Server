@@ -12,7 +12,10 @@ class Connections(object):
 
     _ROOT_PATH = '/connections'
 
-    def __init__(self):
+    def __init__(self, testing=False):
+        self.database = None
+        if not testing:
+            self.database = database
 
         # User inner methods so self pointer can be accessed
 
@@ -29,10 +32,10 @@ class Connections(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            if database.get_connection(request.json['system_id']):
-                return error_response('Connection already exist for system')
+            if self.database.get_connection(request.json['system_id']):
+                return error_response('Connection already exist')
 
-            if not database.add_connection(request.json['system_id'], request.json['host'], request.json['port']):
+            if not self.database.add_connection(request.json['system_id'], request.json['host'], request.json['port']):
                 return error_response('Unable to add connection')
 
             return success_response(request.path)
@@ -48,7 +51,7 @@ class Connections(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            connection = database.get_connection(request.json['system_id'])
+            connection = self.database.get_connection(request.json['system_id'])
             if not connection: return success_response(request.path, data=False)
 
             return success_response(request.path, data=connection)
@@ -66,10 +69,10 @@ class Connections(object):
             status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
             if not status: return error_response(error)
 
-            if not database.get_connection(request.json['system_id']):
-                return error_response('Connection for system does not exist')
+            if not self.database.get_connection(request.json['system_id']):
+                return error_response('Connection does not exist')
 
-            if not database.update_connection(request.json['system_id'], host=request.json['host'], port=request.json['port']):
+            if not self.database.update_connection(request.json['system_id'], host=request.json['host'], port=request.json['port']):
                 return error_response('Unable to update connection for system')
 
             return success_response(request.path)
