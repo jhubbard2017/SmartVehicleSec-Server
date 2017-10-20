@@ -10,7 +10,6 @@ from securityserverpy import _logger
 from securityserverpy.routes import verify_request, error_response, success_response, database, app
 from securityserverpy.email.email import Email
 
-
 class Authentication(object):
 
     _ROOT_PATH = '/authentication'
