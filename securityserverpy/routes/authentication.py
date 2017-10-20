@@ -8,7 +8,7 @@ import string
 import random
 from securityserverpy import _logger
 from securityserverpy.routes import verify_request, error_response, success_response, database, app
-from securityserverpy.email.email import Email
+from securityserverpy.smtp_email.smtp_email import Email
 
 class Authentication(object):
 
