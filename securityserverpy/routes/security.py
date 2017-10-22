@@ -83,7 +83,7 @@ class Security(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='arm'):
+            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='security/arm'):
                 return error_response('Unable to complete system request')
 
             if not database.update_security_config(user['system_id'], system_armed=True):
@@ -113,7 +113,7 @@ class Security(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='disarm'):
+            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='security/disarm'):
                 return error_response('Unable to complete system request')
 
             if not database.update_security_config(user['system_id'], system_armed=False):
@@ -142,7 +142,7 @@ class Security(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='false_alarm'):
+            if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='security/false_alarm'):
                 return error_response('Unable to complete system request')
 
             if not database.update_security_config(user['system_id'], system_breached=False):

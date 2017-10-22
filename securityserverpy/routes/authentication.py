@@ -61,7 +61,7 @@ class Authentication(object):
             if not status: return error_response(error)
 
             # Check if user exists and password is correct
-            user = self.database.verify_user(request.json['email'], request.json['password'])
+            user = self.database.get_user(request.json['email'])
             if not user: return error_response('User does not exist')
 
             # Check if user is already logged out

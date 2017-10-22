@@ -36,7 +36,7 @@ class Systems(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='temperature')
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='system/temperature')
             if not data: return error_response('Unable to complete system request')
 
             return success_response(request.path, data=data)
@@ -59,7 +59,7 @@ class Systems(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='speedometer')
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='system/speedometer')
             if not data: return error_response('Unable to complete system request')
 
             return success_response(request.path, data=data)
@@ -82,7 +82,7 @@ class Systems(object):
             connection = database.get_connection(user['system_id'])
             if not connection: return error_response('Unable to get connection for system', user_system=user['email'])
 
-            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='location')
+            data = self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='system/location')
             if not data: return error_response('Unable to complete system request')
 
             return success_response(request.path, data=data)

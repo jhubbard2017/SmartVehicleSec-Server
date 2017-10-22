@@ -27,7 +27,7 @@ class ClientRequests(object):
         returns:
             json {}
         """
-        url = 'http://{0}:{1}/system/{2}'.format(host, port, path)
+        url = 'http://{0}:{1}/{2}'.format(host, port, path)
         request_data = {'system_id': system_id}
         for key, value in data.iteritems():
             request_data[key] = value
