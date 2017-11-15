@@ -220,6 +220,6 @@ class Security(object):
             if not user['logged_in']: return error_response('User not authenticated')
 
             logs = database.get_logs(user['system_id'])
-            if not logs: return error_response('Unable to get logs for system')
+            if not logs: return success_response(request.path, data=[])
 
             return success_response(request.path, data=logs)

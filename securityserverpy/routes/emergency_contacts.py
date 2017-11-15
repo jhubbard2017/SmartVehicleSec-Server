@@ -61,7 +61,7 @@ class EmergencyContacts(object):
             if not user['logged_in']: return error_response('User not authenticated')
 
             contacts = self.database.get_contacts(user['system_id'])
-            if not contacts: return error_response('Unable to get contacts for user')
+            if not contacts: return success_response(request.path, data=[])
 
             return success_response(request.path, data=contacts)
 

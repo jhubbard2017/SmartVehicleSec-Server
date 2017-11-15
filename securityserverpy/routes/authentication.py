@@ -41,7 +41,7 @@ class Authentication(object):
             if not user: return error_response('User does not exist')
 
             # Check if user is already logged in
-            if user['logged_in']: return error_response('User already logged in')
+            if user['logged_in']: return success_response(request.path)
 
             # Update auth status for user
             if not self.database.update_user(request.json['email'], logged_in=True):

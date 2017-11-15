@@ -31,7 +31,7 @@ class Email(object):
         """
         email = MIMEMultipart('alternative')
         email['Subject'] = self._SYSTEM_SUBJECT
-        email['From'] = self._SYSTEM_EMAIL
+        email['From'] = self._SYSTEM_EMAIL_ADDRESS
         email['To'] = email_addr
 
         # Create both plaintext and html version so that email application can render either when needed
@@ -48,9 +48,8 @@ class Email(object):
             mail = smtplib.SMTP(self._MAIL_SERVER, self._MAIL_PORT)
             mail.ehlo()
             mail.starttls()
-            mail.login(self._SYSTEM_EMAIL, self._SYSTEM_PASSWORD)
-            mail.sendmail(email_addr, self._SYSTEM_EMAIL, email.as_string())
-            self.total_emails_sent += 1
+            mail.login(self._SYSTEM_EMAIL_ADDRESS, self._SYSTEM_PASSWORD)
+            mail.sendmail(email_addr, self._SYSTEM_EMAIL_ADDRESS, email.as_string())
         except smtplib.SMTPException as e:
             _logger.debug('Could not send email. [{0}]'.format(e))
             mail.quit()

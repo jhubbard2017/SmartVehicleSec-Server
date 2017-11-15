@@ -64,7 +64,7 @@ class Users(object):
             if not user: return error_response('User does not exist')
             if not user['logged_in']: return error_response('User not authenticated')
 
-            return success_response(request.json, data=user)
+            return success_response(request.path, data=user)
 
 
         @app.route('{0}/remove'.format(self._ROOT_PATH), methods=['POST'])

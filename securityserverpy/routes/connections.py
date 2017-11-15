@@ -46,12 +46,19 @@ class Connections(object):
 
             required_data:
                 system_id: str
+                email: str (optional)
             """
-            required_data_keys = ['system_id']
-            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
+            required_data_keys = ['system_id', 'email']
+            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=False)
             if not status: return error_response(error)
 
-            connection = self.database.get_connection(request.json['system_id'])
+            if "system_id" in request.json:
+                connection = self.database.get_connection(request.json['system_id'])
+            else:
+                user = self.database.get_user(request.json['email'])
+                if not user: return error_response('User does not exist')
+                connection = self.database.get_connection(user['system_id'])
+                
             if not connection: return success_response(request.path, data=False)
 
             return success_response(request.path, data=connection)

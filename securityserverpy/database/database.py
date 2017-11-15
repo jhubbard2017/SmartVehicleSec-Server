@@ -229,13 +229,13 @@ class Database(object):
         returns:
             {firstname, lastname, phone, vehicle, system_id, logged_in}
         """
-        sql = 'SELECT firstname, lastname, phone, vehicle, system_id, logged_in FROM users WHERE email = %s;'
+        sql = 'SELECT firstname, lastname, email, phone, vehicle, system_id, logged_in FROM users WHERE email = %s;'
         values = (email,)
         self._commit_sql(sql, values)
         data = self._fetch_one_data()
         if not data or len(data) == 0:
             return None
-        user = {'firstname': data[0], 'lastname': data[1], 'phone': data[2], 'vehicle': data[3], 'system_id': data[4], 'logged_in': data[5]}
+        user = {'firstname': data[0], 'lastname': data[1], 'email': data[2], 'phone': data[3], 'vehicle': data[4], 'system_id': data[5], 'logged_in': data[6]}
         return user
 
     def verify_user(self, email, password):
@@ -265,13 +265,13 @@ class Database(object):
         returns:
             {firstname, lastname, phone, vehicle, system_id}
         """
-        sql = 'SELECT firstname, lastname, phone, vehicle, system_id FROM users WHERE system_id = %s;'
+        sql = 'SELECT firstname, lastname, email, phone, vehicle, system_id, logged_in FROM users WHERE system_id = %s;'
         values = (system_id,)
         self._commit_sql(sql, values)
         data = self._fetch_one_data()
         if not data or len(data) == 0:
             return None
-        user = {'firstname': data[0], 'lastname': data[1], 'phone': data[2], 'vehicle': data[3], 'system_id': data[4]}
+        user = {'firstname': data[0], 'lastname': data[1], 'email': data[2], 'phone': data[3], 'vehicle': data[4], 'system_id': data[5], 'logged_in': data[6]}
         return user
 
     def add_connection(self, system_id, host, port):
