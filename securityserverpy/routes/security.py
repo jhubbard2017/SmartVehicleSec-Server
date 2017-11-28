@@ -7,8 +7,7 @@ from flask import request
 from securityserverpy import _logger
 from securityserverpy.routes import verify_request, error_response, success_response, database, app
 from securityserverpy.client_requests import ClientRequests
-from securityserverpy.panic_response import PanicResponse
-
+from securityserverpy.smtp_email.smtp_email import Email
 
 class Security(object):
 
@@ -16,7 +15,7 @@ class Security(object):
 
     def __init__(self):
         self.client_requests = ClientRequests()
-        self.panic_response = PanicResponse()
+        self.email = Email()
 
         # Use inner methods so self pointer can be accessed
 
@@ -171,7 +170,7 @@ class Security(object):
             if not contacts: return error_response('Unable to get contacts for system')
 
             for contact in contacts:
-                if not self.panic_response.send_message(contact['email'], user):
+                if not self.email.send_panic_response_email(contact['email'], user):
                     return error_response('Unable to send email to contacts for system')
 
             # Todo: send push notification to user
@@ -199,7 +198,9 @@ class Security(object):
             if not database.update_security_config(request.json['system_id'], system_breached=True):
                 return error_response('Unable to update security config')
 
-            if not database.add_log(user['system_id'], 'System breached'):
+            # Todo: send notification to mobile app client
+
+            if not database.add_log(request.json['system_id'], 'System breached'):
                 _logger.debug('Failed to add log for [{0}]'.format(user['system_id']))
 
             return success_response(request.path)

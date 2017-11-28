@@ -385,7 +385,7 @@ class Database(object):
         self._commit_sql(sql, values)
         data = self._fetch_all_data()
         if not data or len(data) == 0:
-            return None
+            return []
         return [{'name': contact[0], 'email': contact[1], 'phone': contact[2]} for contact in data]
 
     def add_log(self, system_id, info):

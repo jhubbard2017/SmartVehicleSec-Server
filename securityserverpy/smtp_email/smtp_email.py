@@ -64,7 +64,26 @@ class Email(object):
         args:
             email_addr: str
             new_password: str
+
+        returns:
+            bool
         """
         html = "<h5>Here is your new temporary login information.</h5>" \
                "<p>Email: {0}</p><p>Password: {1}</p>".format(email_addr, new_password)
+        return self._send_email(html, email_addr)
+
+    def send_panic_response_email(self, email_addr, user):
+        """sends panic response email notification
+
+        args:
+            email_addr: str
+            user: {}
+
+        returns:
+            bool
+        """
+        html = "<h5>Here is a panic response email.</h5>" \
+               "<p>You are a member of the emergency list of {0} {1}.</p>" \
+               "<p>They initiated a panic response. Please get in contact with " \
+               "them at -- {2} -- or get in contact with dispatchers.</p>".format(user['firstname'], user['lastname'], email_addr)
         return self._send_email(html, email_addr)
