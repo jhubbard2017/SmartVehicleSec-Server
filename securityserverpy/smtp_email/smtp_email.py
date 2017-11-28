@@ -49,7 +49,7 @@ class Email(object):
             mail.ehlo()
             mail.starttls()
             mail.login(self._SYSTEM_EMAIL_ADDRESS, self._SYSTEM_PASSWORD)
-            mail.sendmail(email_addr, self._SYSTEM_EMAIL_ADDRESS, email.as_string())
+            mail.sendmail(self._SYSTEM_EMAIL_ADDRESS, email_addr, email.as_string())
         except smtplib.SMTPException as e:
             _logger.debug('Could not send email. [{0}]'.format(e))
             mail.quit()
@@ -84,6 +84,6 @@ class Email(object):
         """
         html = "<h5>Here is a panic response email.</h5>" \
                "<p>You are a member of the emergency list of {0} {1}.</p>" \
-               "<p>They initiated a panic response. Please get in contact with " \
-               "them at -- {2} -- or get in contact with dispatchers.</p>".format(user['firstname'], user['lastname'], email_addr)
+               "<p>They initiated a panic response. Please get in contact with them at {2} or {3}" \
+               "<p>They are in a {4} vehicle!<\p>".format(user['firstname'], user['lastname'], user['email'], user['phone'], email_addr)
         return self._send_email(html, email_addr)
