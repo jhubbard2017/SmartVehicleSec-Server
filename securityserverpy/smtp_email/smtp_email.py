@@ -84,6 +84,6 @@ class Email(object):
         """
         html = "<h5>Here is a panic response email.</h5>" \
                "<p>You are a member of the emergency list of {0} {1}.</p>" \
-               "<p>They initiated a panic response. Please get in contact with them at {2} or {3}" \
-               "<p>They are in a {4} vehicle!<\p>".format(user['firstname'], user['lastname'], user['email'], user['phone'], email_addr)
+               "<p>They initiated a panic response. Please get in contact with them at {2}" \
+               "<p>They are in a {3} vehicle!</p>".format(user['firstname'], user['lastname'], user['phone'], user['vehicle'], email_addr)
         return self._send_email(html, email_addr)
