@@ -144,10 +144,10 @@ class Security(object):
             if not self.client_requests.make_request(connection['host'], connection['port'], user['system_id'], path='security/false_alarm'):
                 return error_response('Unable to complete system request')
 
-            if not database.update_security_config(user['system_id'], system_breached=False):
+            if not database.update_security_config(user['system_id'], system_breached=False, system_armed=False):
                 return error_response('Failed to update security config')
 
-            if not database.add_log(user['system_id'], 'System breach false alarm'):
+            if not database.add_log(user['system_id'], 'System breach: false alarm'):
                 _logger.debug('Failed to add log for [{0}]'.format(user['system_id']))
 
             return success_response(request.path)
@@ -158,15 +158,17 @@ class Security(object):
 
             required data:
                 system_id: str
+                email: str (optional)
             """
-            required_data_keys = ['system_id']
-            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=True)
+            required_data_keys = ['system_id', 'email']
+            status, error = verify_request(request.json, keys=required_data_keys, all_should_exist=False)
             if not status: return error_response(error)
 
-            user = database.get_user_with_system_id(request.json['system_id'])
-            if not user: return error_response('Unable to get associated user for system')
+            if 'system_id' in request.json: user = database.get_user_with_system_id(request.json['system_id'])
+            else: user = database.get_user(request.json['email'])
+            if not user: return error_response('Unable to get user')
 
-            contacts = database.get_contacts(request.json['system_id'])
+            contacts = database.get_contacts(user['system_id'])
             if not contacts: return error_response('Unable to get contacts for system')
 
             for contact in contacts:
